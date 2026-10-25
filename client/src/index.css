@@ -1,1 +1,49 @@
 @import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-navy: #14213d;
+  --color-brand: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-brand-active: #1e40af;
+  --color-accent: #14b8a6;
+
+  /* Surfaces, text, and borders */
+  --color-page: #f8fafc;
+  --color-surface: #ffffff;
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+
+  /* Status colors. The "-strong" versions are dark enough for small text. */
+  --color-success: #16a34a;
+  --color-success-strong: #15803d;
+  --color-warning: #d97706;
+  --color-warning-strong: #b45309;
+  --color-danger: #dc2626;
+  --color-danger-strong: #b91c1c;
+
+  /* Typography */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Shape and depth */
+  --radius-control: 0.625rem;
+  --shadow-card:
+    0 1px 2px 0 rgb(15 23 42 / 0.05), 0 1px 3px 0 rgb(15 23 42 / 0.08);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* One clear keyboard focus style for the whole app. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
