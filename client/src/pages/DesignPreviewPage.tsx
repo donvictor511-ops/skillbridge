@@ -64,7 +64,7 @@ export default function DesignPreviewPage(): ReactElement {
   }
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-8 sm:py-12">
+    <div className="min-h-screen px-4 py-8 sm:px-8 sm:py-12">
       <div className="mx-auto max-w-4xl space-y-6">
         <header>
           <Badge tone="accent">Temporary preview</Badge>
@@ -248,6 +248,6 @@ export default function DesignPreviewPage(): ReactElement {
           />
         </PreviewSection>
       </div>
-    </main>
+    </div>
   );
 }
