@@ -6,6 +6,7 @@ export interface Env {
   nodeEnv: NodeEnv;
   port: number;
   clientOrigin: string;
+  databaseUrl: string;
 }
 
 function readNodeEnv(value: string | undefined): NodeEnv {
@@ -42,4 +43,5 @@ export const env: Env = {
   nodeEnv: readNodeEnv(process.env.NODE_ENV),
   port: readPort(process.env.PORT),
   clientOrigin: readRequired("CLIENT_ORIGIN", process.env.CLIENT_ORIGIN),
+  databaseUrl: readRequired("DATABASE_URL", process.env.DATABASE_URL),
 };
