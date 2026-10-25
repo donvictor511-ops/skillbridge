@@ -1,0 +1,45 @@
+import "dotenv/config";
+
+type NodeEnv = "development" | "test" | "production";
+
+export interface Env {
+  nodeEnv: NodeEnv;
+  port: number;
+  clientOrigin: string;
+}
+
+function readNodeEnv(value: string | undefined): NodeEnv {
+  if (value === undefined || value === "") {
+    return "development";
+  }
+  if (value === "development" || value === "test" || value === "production") {
+    return value;
+  }
+  throw new Error(
+    `Invalid NODE_ENV "${value}". Use development, test, or production.`,
+  );
+}
+
+function readPort(value: string | undefined): number {
+  const port = Number(value ?? "4000");
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(
+      `Invalid PORT "${String(value)}". Use a whole number from 1 to 65535.`,
+    );
+  }
+  return port;
+}
+
+function readRequired(name: string, value: string | undefined): string {
+  if (value === undefined || value.trim() === "") {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value.trim();
+}
+
+// Read and validate once. If something is wrong, the server refuses to start.
+export const env: Env = {
+  nodeEnv: readNodeEnv(process.env.NODE_ENV),
+  port: readPort(process.env.PORT),
+  clientOrigin: readRequired("CLIENT_ORIGIN", process.env.CLIENT_ORIGIN),
+};
