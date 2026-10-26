@@ -44,7 +44,7 @@ export default function SetupCheckPage(): ReactElement {
   ];
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8 text-[#0F172A] sm:px-8 sm:py-16">
+    <div className="min-h-screen bg-[#F8FAFC] px-4 py-8 text-[#0F172A] sm:px-8 sm:py-16">
       <div className="mx-auto max-w-2xl rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
         <p className="inline-block rounded-full border border-[#14B8A6] bg-[#14B8A6]/10 px-3 py-1 text-xs font-semibold text-[#14213D]">
           Temporary setup check
@@ -74,6 +74,6 @@ export default function SetupCheckPage(): ReactElement {
           ))}
         </ul>
       </div>
-    </main>
+    </div>
   );
 }
