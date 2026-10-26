@@ -1,8 +1,7 @@
-import CrashTestPage from "../pages/CrashTestPage";
 import { createBrowserRouter } from "react-router";
 import { paths } from "./paths";
 import PublicLayout from "../layouts/PublicLayout";
-import SetupCheckPage from "../pages/SetupCheckPage";
+import LandingPage from "../pages/LandingPage";
 import DesignPreviewPage from "../pages/DesignPreviewPage";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
@@ -22,14 +21,13 @@ export const router = createBrowserRouter([
         // If a page crashes, the header and footer stay visible.
         errorElement: <RouteErrorPage />,
         children: [
-          { path: paths.home, element: <SetupCheckPage /> }, // TEMPORARY
+          { path: paths.home, element: <LandingPage /> },
           { path: paths.designPreview, element: <DesignPreviewPage /> }, // TEMPORARY
           { path: paths.login, element: <LoginPage /> }, // PLACEHOLDER
           { path: paths.register, element: <RegisterPage /> }, // PLACEHOLDER
           { path: paths.accessDenied, element: <AccessDeniedPage /> },
           // The catch-all: any URL that matched nothing above.
           { path: "*", element: <NotFoundPage /> },
-          { path: "/crash-test", element: <CrashTestPage /> }, // TEMPORARY
         ],
       },
     ],
