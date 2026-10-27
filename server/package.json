@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
     "db:check": "tsx src/db/checkConnection.ts"
   },
   "keywords": [],

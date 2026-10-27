@@ -9,21 +9,10 @@ datasource db {
   provider = "postgresql"
 }
 
-// Tables are added feature by feature, starting in Part 3.
-
-// An account that can log in. Profile details (headline, bio, skills...)
-// live in a separate "profiles" table, added in Part 4.
 model User {
-  // Random, hard-to-guess id. Prisma generates it when a user is created.
-  id           String   @id @default(uuid()) @db.Uuid
-
-  // Always stored trimmed and lowercase (done in code), unique in the database.
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email        String   @unique
-
-  // The Argon2id hash. Never the password. Never returned by an API.
   passwordHash String   @map("password_hash")
-
-  fullName     String   @map("full_name")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

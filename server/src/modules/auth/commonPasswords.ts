@@ -1,0 +1,55 @@
+// A small starter list of very common passwords that are at least 12
+// characters long (shorter ones are already rejected by the length rule).
+// Real products also check passwords against large breached-password lists.
+// We may upgrade this later.
+const COMMON_PASSWORDS: ReadonlySet<string> = new Set([
+  "password1234",
+  "password12345",
+  "password123456",
+  "passwordpassword",
+  "passw0rd1234",
+  "p@ssword1234",
+  "p@ssw0rd1234",
+  "mypassword123",
+  "mypassword1234",
+  "123456789012",
+  "1234567890123",
+  "12345678901234",
+  "1234567890123456",
+  "123123123123",
+  "111111111111",
+  "000000000000",
+  "aaaaaaaaaaaa",
+  "qwertyuiop12",
+  "qwertyuiopas",
+  "qwertyuiop123",
+  "qwerty123456",
+  "1q2w3e4r5t6y",
+  "1qaz2wsx3edc",
+  "abcdefghijkl",
+  "abcdefg12345",
+  "iloveyou1234",
+  "iloveyou12345",
+  "letmein123456",
+  "welcome12345",
+  "welcome123456",
+  "changeme1234",
+  "administrator",
+  "adminadmin123",
+  "trustno1trustno1",
+  "football12345",
+  "baseball12345",
+  "monkey123456",
+  "dragon123456",
+  "superman1234",
+  "sunshine1234",
+  "princess1234",
+  "whatever1234",
+  "starwars1234",
+  "freedom12345",
+  "computer1234",
+]);
+
+export function isCommonPassword(password: string): boolean {
+  return COMMON_PASSWORDS.has(password.toLowerCase());
+}
