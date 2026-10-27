@@ -15,7 +15,7 @@ export interface BadgeProps extends ComponentPropsWithoutRef<"span"> {
 
 const toneClasses: Record<BadgeTone, string> = {
   neutral: "bg-line text-ink",
-  brand: "bg-brand/10 text-brand",
+  brand: "bg-brand/10 text-brand-hover",
   accent: "bg-accent/15 text-navy",
   success: "bg-success/10 text-success-strong",
   warning: "bg-warning/10 text-warning-strong",

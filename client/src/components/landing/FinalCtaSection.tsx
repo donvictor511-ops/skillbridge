@@ -7,7 +7,10 @@ import { Section } from "./Section";
 export function FinalCtaSection(): ReactElement {
   return (
     <Section labelledBy="cta-heading">
-      <div className="rounded-3xl bg-navy px-6 py-12 text-center sm:px-12 sm:py-16">
+      <div
+        className="rounded-3xl bg-navy px-6 py-12 text-center sm:px-12 sm:py-16"
+        data-surface="dark"
+      >
         <h2
           id="cta-heading"
           className="text-2xl font-bold text-white sm:text-3xl"

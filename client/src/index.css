@@ -15,11 +15,12 @@
   --color-muted: #64748b;
   --color-line: #e2e8f0;
 
-  /* Status colors. The "-strong" versions are dark enough for small text. */
+  /* Status colors. The "-strong" versions are dark enough for small text,
+     even on a pale tinted background. */
   --color-success: #16a34a;
-  --color-success-strong: #15803d;
+  --color-success-strong: #166534;
   --color-warning: #d97706;
-  --color-warning-strong: #b45309;
+  --color-warning-strong: #92400e;
   --color-danger: #dc2626;
   --color-danger-strong: #b91c1c;
 
@@ -45,5 +46,11 @@
   :focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
+  }
+
+  /* On dark (navy) areas the blue outline is hard to see, so use white.
+     Add data-surface="dark" to any dark container. */
+  [data-surface="dark"] :focus-visible {
+    outline-color: var(--color-surface);
   }
 }
