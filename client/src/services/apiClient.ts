@@ -10,4 +10,6 @@ export const apiClient: AxiosInstance = axios.create({
   baseURL,
   timeout: 10_000,
   headers: { "Content-Type": "application/json" },
+  // Send the session cookie to the API (and accept a new one).
+  withCredentials: true,
 });

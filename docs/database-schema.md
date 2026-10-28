@@ -17,3 +17,15 @@ Notes:
 
 - The unique index on `email` also makes login lookups fast.
 - Profiles, skills, and portfolio tables are added in Part 4.
+
+## sessions
+
+| Column     | Type      | Rules                                                                  |
+| ---------- | --------- | ---------------------------------------------------------------------- |
+| id         | UUID      | Primary key                                                            |
+| user_id    | UUID      | Foreign key to users.id, ON DELETE CASCADE, indexed                    |
+| token_hash | text      | SHA-256 of the session token. Unique. The token itself is never stored |
+| created_at | timestamp | Default: now                                                           |
+| expires_at | timestamp | 7 days after login                                                     |
+
+Expired rows are ignored when reading. A cleanup job comes later.

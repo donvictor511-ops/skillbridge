@@ -1,15 +1,14 @@
 import { prisma } from "../../db/prisma";
 import { AppError } from "../../utils/appError";
-import type { RegisterInput } from "./auth.schema";
-import { hashPassword } from "./password.service";
-
-// The ONLY user fields we ever send to the client.
-// Note: no password and no passwordHash.
-export interface PublicUser {
-  id: string;
-  email: string;
-  createdAt: Date;
-}
+import type { AuthUser } from "./auth.types";
+import type { LoginInput, RegisterInput } from "./auth.schema";
+import {
+  getDummyPasswordHash,
+  hashPassword,
+  verifyPassword,
+} from "./password.service";
+import { createSession } from "./session.service";
+import type { CreatedSession } from "./session.service";
 
 // P2002 is Prisma's code for "unique constraint violated".
 // 23505 is PostgreSQL's own code for the same problem.
@@ -22,7 +21,7 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
-export async function registerUser(input: RegisterInput): Promise<PublicUser> {
+export async function registerUser(input: RegisterInput): Promise<AuthUser> {
   const passwordHash = await hashPassword(input.password);
 
   try {
@@ -43,4 +42,38 @@ export async function registerUser(input: RegisterInput): Promise<PublicUser> {
     }
     throw error;
   }
+}
+
+interface LoginResult {
+  user: AuthUser;
+  session: CreatedSession;
+}
+
+export async function loginUser(input: LoginInput): Promise<LoginResult> {
+  const found = await prisma.user.findUnique({
+    where: { email: input.email },
+    select: { id: true, email: true, createdAt: true, passwordHash: true },
+  });
+
+  // ALWAYS do exactly one password check, even if the email is unknown.
+  // Otherwise "unknown email" would answer faster than "wrong password",
+  // and attackers could use the timing to discover real accounts.
+  const hashToCheck = found?.passwordHash ?? (await getDummyPasswordHash());
+  const passwordMatches = await verifyPassword(hashToCheck, input.password);
+
+  if (!found || !passwordMatches) {
+    // One generic message for BOTH failures.
+    throw new AppError(
+      401,
+      "INVALID_CREDENTIALS",
+      "Email or password is incorrect.",
+    );
+  }
+
+  const session = await createSession(found.id);
+
+  return {
+    user: { id: found.id, email: found.email, createdAt: found.createdAt },
+    session,
+  };
 }

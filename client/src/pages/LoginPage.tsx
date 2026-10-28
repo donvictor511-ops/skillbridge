@@ -1,13 +1,27 @@
 import type { ReactElement } from "react";
-import { ComingSoon } from "../components/layout/ComingSoon";
+import { Link } from "react-router";
+import { paths } from "../app/paths";
+import { AuthCard } from "../features/auth/AuthCard";
+import { LoginForm } from "../features/auth/LoginForm";
 
-// PLACEHOLDER: the real login form and server connection are built in
-// Part 3, Step 4. Until then this page honestly says it is not available.
 export default function LoginPage(): ReactElement {
   return (
-    <ComingSoon
-      title="Log in is not available yet"
-      description="Accounts are still being built. This page will have a real login form soon."
-    />
+    <AuthCard
+      title="Welcome back"
+      description="Log in to your SkillBridge account."
+      footer={
+        <>
+          New to SkillBridge?{" "}
+          <Link
+            to={paths.register}
+            className="rounded-control font-semibold text-brand underline underline-offset-4 hover:text-brand-hover"
+          >
+            Create an account
+          </Link>
+        </>
+      }
+    >
+      <LoginForm />
+    </AuthCard>
   );
 }

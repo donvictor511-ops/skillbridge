@@ -1,5 +1,8 @@
+import cookieParser from "cookie-parser";
+import cors from "cors";
 import express from "express";
 import type { Express } from "express";
+import { env } from "./config/env";
 import { authRouter } from "./modules/auth/auth.routes";
 import { healthRouter } from "./modules/health/health.routes";
 import { notFoundHandler } from "./middleware/notFound";
@@ -11,8 +14,15 @@ export function createApp(): Express {
   // Do not advertise which framework we use.
   app.disable("x-powered-by");
 
+  // Only our own website may call this API from a browser, and it may send
+  // cookies. Never use "*" together with cookies.
+  app.use(cors({ origin: env.clientOrigin, credentials: true }));
+
   // Read JSON request bodies. The small limit blocks oversized requests.
   app.use(express.json({ limit: "10kb" }));
+
+  // Read cookies into req.cookies.
+  app.use(cookieParser());
 
   // Routes
   app.use("/api/v1/health", healthRouter);

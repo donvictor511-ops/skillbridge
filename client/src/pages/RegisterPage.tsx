@@ -1,13 +1,27 @@
 import type { ReactElement } from "react";
-import { ComingSoon } from "../components/layout/ComingSoon";
+import { Link } from "react-router";
+import { paths } from "../app/paths";
+import { AuthCard } from "../features/auth/AuthCard";
+import { RegisterForm } from "../features/auth/RegisterForm";
 
-// PLACEHOLDER: the real registration form and server connection are built in
-// Part 3, Steps 2 and 4. Until then this page honestly says it is not available.
 export default function RegisterPage(): ReactElement {
   return (
-    <ComingSoon
-      title="Sign up is not available yet"
-      description="Accounts are still being built. This page will have a real sign-up form soon."
-    />
+    <AuthCard
+      title="Create your account"
+      description="Join SkillBridge and start building a profile backed by real work."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link
+            to={paths.login}
+            className="rounded-control font-semibold text-brand underline underline-offset-4 hover:text-brand-hover"
+          >
+            Log in
+          </Link>
+        </>
+      }
+    >
+      <RegisterForm />
+    </AuthCard>
   );
 }

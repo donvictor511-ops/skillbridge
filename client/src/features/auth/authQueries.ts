@@ -1,0 +1,57 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getCurrentUser,
+  login,
+  logout,
+  register,
+} from "../../services/authService";
+
+// One place for the cache key, so every file refers to the same data.
+export const authKeys = {
+  me: ["auth", "me"] as const,
+};
+
+// "Who is logged in?" The result is a user, or null when logged out.
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: authKeys.me,
+    queryFn: getCurrentUser,
+    retry: false, // a 401 is an answer, not a failure to retry
+    staleTime: 60_000,
+  });
+}
+
+export function useLogin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: login,
+    onSuccess: (user) => {
+      // Remember the user right away. GuestRoute then redirects by itself.
+      queryClient.setQueryData(authKeys.me, user);
+    },
+  });
+}
+
+export function useRegister() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: register,
+    onSuccess: (user) => {
+      queryClient.setQueryData(authKeys.me, user);
+    },
+  });
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      // The server ended the session. Remember that in the cache too.
+      queryClient.setQueryData(authKeys.me, null);
+    },
+  });
+}
