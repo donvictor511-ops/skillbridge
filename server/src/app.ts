@@ -15,9 +15,21 @@ export function createApp(): Express {
   // Do not advertise which framework we use.
   app.disable("x-powered-by");
 
-  // Only our own website may call this API from a browser, and it may send
-  // cookies. Never use "*" together with cookies.
-  app.use(cors({ origin: env.clientOrigin, credentials: true }));
+  // Only our own website may call this API from a browser.
+  // Allow requests without an Origin header (e.g. curl and server-to-server).
+  // Reject browser requests from other origins.
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin || origin === env.clientOrigin) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      },
+      credentials: true,
+    }),
+  );
 
   // Read JSON request bodies. The small limit blocks oversized requests.
   app.use(express.json({ limit: "10kb" }));

@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:check": "tsx src/db/checkConnection.ts"
+    "db:check": "tsx src/db/checkConnection.ts",
+    "test:smoke": "bash scripts/smoke-auth.sh"
   },
   "keywords": [],
   "author": "",
