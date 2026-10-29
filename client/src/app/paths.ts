@@ -3,6 +3,7 @@ export const paths = {
   home: "/",
   login: "/login",
   register: "/register",
+  onboarding: "/onboarding",
   dashboard: "/dashboard",
   accessDenied: "/access-denied",
   // TEMPORARY: removed when the real pages are built.

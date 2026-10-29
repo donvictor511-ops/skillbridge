@@ -104,6 +104,12 @@ export function RegisterForm(): ReactElement {
         error={fieldErrors.password}
       />
 
+      <p id="register-password-length" className="text-sm" aria-live="polite">
+        {password.length < PASSWORD_MIN_LENGTH
+          ? `${PASSWORD_MIN_LENGTH - password.length} more characters needed`
+          : "Long enough"}
+      </p>
+
       <Button type="submit" fullWidth loading={registerMutation.isPending}>
         {registerMutation.isPending ? "Creating account..." : "Create account"}
       </Button>

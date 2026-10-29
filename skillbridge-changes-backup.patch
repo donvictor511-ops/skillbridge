@@ -1,0 +1,403 @@
+diff --git a/client/src/app/paths.ts b/client/src/app/paths.ts
+index 8460ca5..12a9143 100644
+--- a/client/src/app/paths.ts
++++ b/client/src/app/paths.ts
+@@ -3,6 +3,7 @@ export const paths = {
+   home: "/",
+   login: "/login",
+   register: "/register",
++  onboarding: "/onboarding",
+   dashboard: "/dashboard",
+   accessDenied: "/access-denied",
+   // TEMPORARY: removed when the real pages are built.
+diff --git a/client/src/app/router.tsx b/client/src/app/router.tsx
+index 5e60fb2..373428b 100644
+--- a/client/src/app/router.tsx
++++ b/client/src/app/router.tsx
+@@ -2,12 +2,14 @@ import { createBrowserRouter } from "react-router";
+ import type { RouteObject } from "react-router";
+ import { paths } from "./paths";
+ import { GuestRoute } from "../features/auth/GuestRoute";
++import { OnboardedRoute } from "../features/auth/OnboardedRoute";
+ import { ProtectedRoute } from "../features/auth/ProtectedRoute";
+ import PublicLayout from "../layouts/PublicLayout";
+ import LandingPage from "../pages/LandingPage";
+ import DashboardPage from "../pages/DashboardPage";
+ import DesignPreviewPage from "../pages/DesignPreviewPage";
+ import LoginPage from "../pages/LoginPage";
++import OnboardingPage from "../pages/OnboardingPage";
+ import RegisterPage from "../pages/RegisterPage";
+ import AccessDeniedPage from "../pages/AccessDeniedPage";
+ import NotFoundPage from "../pages/NotFoundPage";
+@@ -44,7 +46,16 @@ export const router = createBrowserRouter([
+           {
+             // Everything inside here needs a logged-in user.
+             element: <ProtectedRoute />,
+-            children: [{ path: paths.dashboard, element: <DashboardPage /> }],
++            children: [
++              { path: paths.onboarding, element: <OnboardingPage /> },
++              {
++                // ...and a finished setup (otherwise: sent to /onboarding).
++                element: <OnboardedRoute />,
++                children: [
++                  { path: paths.dashboard, element: <DashboardPage /> },
++                ],
++              },
++            ],
+           },
+           // The catch-all: any URL that matched nothing above.
+           { path: "*", element: <NotFoundPage /> },
+diff --git a/client/src/features/auth/RegisterForm.tsx b/client/src/features/auth/RegisterForm.tsx
+index 9d0b443..b07c46e 100644
+--- a/client/src/features/auth/RegisterForm.tsx
++++ b/client/src/features/auth/RegisterForm.tsx
+@@ -104,6 +104,12 @@ export function RegisterForm(): ReactElement {
+         error={fieldErrors.password}
+       />
+ 
++      <p id="register-password-length" className="text-sm" aria-live="polite">
++        {password.length < PASSWORD_MIN_LENGTH
++          ? `${PASSWORD_MIN_LENGTH - password.length} more characters needed`
++          : "Long enough"}
++      </p>
++
+       <Button type="submit" fullWidth loading={registerMutation.isPending}>
+         {registerMutation.isPending ? "Creating account..." : "Create account"}
+       </Button>
+diff --git a/client/src/features/auth/authSchemas.ts b/client/src/features/auth/authSchemas.ts
+index b98fdec..423290d 100644
+--- a/client/src/features/auth/authSchemas.ts
++++ b/client/src/features/auth/authSchemas.ts
+@@ -1,5 +1,8 @@
+ import { z } from "zod";
+ 
++// Same helper, now shared. Re-exported so existing imports keep working.
++export { toFieldErrors } from "../../lib/zodErrors";
++
+ // IMPORTANT: these checks only give the user FAST feedback.
+ // The server repeats every check and is the real authority. The numbers here
+ // must match the server (server/src/modules/auth/auth.schema.ts).
+@@ -24,17 +27,3 @@ export const registerFormSchema = z.object({
+     .min(PASSWORD_MIN_LENGTH, `Use at least ${PASSWORD_MIN_LENGTH} characters.`)
+     .max(PASSWORD_MAX_LENGTH, `Use at most ${PASSWORD_MAX_LENGTH} characters.`),
+ });
+-
+-// Turns Zod's list of problems into { fieldName: firstMessage }.
+-export function toFieldErrors(error: z.ZodError): Record<string, string> {
+-  const fieldErrors: Record<string, string> = {};
+-
+-  for (const issue of error.issues) {
+-    const field = String(issue.path[0] ?? "form");
+-    if (!(field in fieldErrors)) {
+-      fieldErrors[field] = issue.message;
+-    }
+-  }
+-
+-  return fieldErrors;
+-}
+diff --git a/client/src/pages/DashboardPage.tsx b/client/src/pages/DashboardPage.tsx
+index 49a12ac..9387da0 100644
+--- a/client/src/pages/DashboardPage.tsx
++++ b/client/src/pages/DashboardPage.tsx
+@@ -1,6 +1,7 @@
+ import type { ReactElement } from "react";
+ import { Badge, Button, ErrorMessage } from "../components/ui";
+ import { useCurrentUser, useLogout } from "../features/auth/authQueries";
++import { capabilityOptions } from "../features/onboarding/onboardingOptions";
+ 
+ // TEMPORARY content: this page only proves that protected routes work.
+ // The real dashboard is built later.
+@@ -8,6 +9,15 @@ export default function DashboardPage(): ReactElement {
+   const { data: user } = useCurrentUser();
+   const logoutMutation = useLogout();
+ 
++  const accountTypes =
++    user?.capabilities
++      .map(
++        (capability) =>
++          capabilityOptions.find((option) => option.value === capability)
++            ?.label ?? capability,
++      )
++      .join(" and ") ?? "";
++
+   function handleLogout(): void {
+     // After logging out, ProtectedRoute notices there is no user and
+     // sends the visitor to the login page by itself.
+@@ -24,9 +34,13 @@ export default function DashboardPage(): ReactElement {
+         Signed in as{" "}
+         <span className="font-semibold text-ink">{user?.email}</span>
+       </p>
++      <p className="mt-1 text-muted">
++        Account type:{" "}
++        <span className="font-semibold text-ink">{accountTypes}</span>
++      </p>
+       <p className="mt-2 text-sm text-muted">
+         The real dashboard comes later. This page only proves that protected
+-        routes work.
++        routes and onboarding work.
+       </p>
+ 
+       {logoutMutation.isError ? (
+diff --git a/client/src/types/auth.ts b/client/src/types/auth.ts
+index 55b3b90..0eba3d4 100644
+--- a/client/src/types/auth.ts
++++ b/client/src/types/auth.ts
+@@ -1,8 +1,13 @@
++import type { Capability } from "./onboarding";
++
+ // The user as the API sends it. JSON turns dates into text.
+ export interface AuthUser {
+   id: string;
+   email: string;
+   createdAt: string;
++  capabilities: Capability[];
++  // null until the person finishes onboarding
++  onboardedAt: string | null;
+ }
+ 
+ // What the login and register forms send to the API.
+diff --git a/docs/api-specification.md b/docs/api-specification.md
+index ba9f337..cdb42d6 100644
+--- a/docs/api-specification.md
++++ b/docs/api-specification.md
+@@ -48,3 +48,20 @@ Public and safe to repeat. Ends the session and clears the cookie. Returns 204.
+ 
+ Requires a session. Returns 200 `{ "data": { "user": {...} } }`, or
+ 401 `UNAUTHENTICATED`.
++
++## POST /onboarding
++
++Requires a session. Completes account setup in one transaction.
++
++Body: `capabilities` (1-2 of professional, client), `displayName` (1-80),
++`headline` (optional, max 120), `location` (optional, max 80),
++`skills` (0-15 names, max 40 characters each), `interests` (0-8 codes),
++`goals` (1+ codes).
++
++- 201: `{ "data": { "user": {..., "capabilities", "onboardedAt" } } }`
++- 400 `VALIDATION_ERROR` (with `details`, for example field `skills.2`)
++- 401 `UNAUTHENTICATED`
++- 409 `ONBOARDING_ALREADY_COMPLETED`
++
++`GET /auth/me` and the login/register responses now include `capabilities`
++and `onboardedAt`.
+diff --git a/docs/database-schema.md b/docs/database-schema.md
+index 460b0d2..a55da59 100644
+--- a/docs/database-schema.md
++++ b/docs/database-schema.md
+@@ -29,3 +29,24 @@ Notes:
+ | expires_at | timestamp | 7 days after login                                                     |
+ 
+ Expired rows are ignored when reading. A cleanup job comes later.
++
++## users (new columns)
++
++- `capabilities` account_type[]: what the account can do (`professional`, `client`).
++  Strict database enum, because it affects permissions.
++- `onboarded_at` timestamp, null until onboarding is finished.
++
++## profiles
++
++One per user (`user_id` unique, cascade delete): `display_name`, `headline`,
++`location`, `interests` text[], `goals` text[], timestamps.
++Part 4 adds bio, experience, education, portfolio, and visibility.
++
++## skills
++
++Shared catalog: `name` (display text) and `name_key` (lowercase, unique).
++
++## user_skills
++
++Join table. Composite primary key (`user_id`, `skill_id`): the same skill
++cannot be added twice. Index on `skill_id`. Cascade delete.
+diff --git a/server/prisma/schema.prisma b/server/prisma/schema.prisma
+index 4e2b3bf..6114a37 100644
+--- a/server/prisma/schema.prisma
++++ b/server/prisma/schema.prisma
+@@ -9,13 +9,24 @@ datasource db {
+   provider = "postgresql"
+ }
+ 
++enum AccountType {
++  professional
++  client
++
++  @@map("account_type")
++}
++
+ model User {
+-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+-  email        String    @unique
+-  passwordHash String    @map("password_hash")
+-  createdAt    DateTime  @default(now()) @map("created_at")
+-  updatedAt    DateTime  @updatedAt @map("updated_at")
++  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
++  email        String        @unique
++  passwordHash String        @map("password_hash")
++  capabilities AccountType[] @default([])
++  onboardedAt  DateTime?     @map("onboarded_at")
++  createdAt    DateTime      @default(now()) @map("created_at")
++  updatedAt    DateTime      @updatedAt @map("updated_at")
+   sessions     Session[]
++  profile      Profile?
++  skills       UserSkill[]
+ 
+   @@map("users")
+ }
+@@ -30,4 +41,41 @@ model Session {
+ 
+   @@index([userId])
+   @@map("sessions")
++}
++
++model Profile {
++  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
++  userId      String   @unique @map("user_id") @db.Uuid
++  displayName String   @map("display_name")
++  headline    String?
++  location    String?
++  interests   String[] @default([])
++  goals       String[] @default([])
++  createdAt   DateTime @default(now()) @map("created_at")
++  updatedAt   DateTime @updatedAt @map("updated_at")
++  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
++
++  @@map("profiles")
++}
++
++model Skill {
++  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
++  name      String
++  nameKey   String      @unique @map("name_key")
++  createdAt DateTime    @default(now()) @map("created_at")
++  users     UserSkill[]
++
++  @@map("skills")
++}
++
++model UserSkill {
++  userId    String   @map("user_id") @db.Uuid
++  skillId   String   @map("skill_id") @db.Uuid
++  createdAt DateTime @default(now()) @map("created_at")
++  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
++  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
++
++  @@id([userId, skillId])
++  @@index([skillId])
++  @@map("user_skills")
+ }
+\ No newline at end of file
+diff --git a/server/src/app.ts b/server/src/app.ts
+index fda178e..a4ed962 100644
+--- a/server/src/app.ts
++++ b/server/src/app.ts
+@@ -5,6 +5,7 @@ import type { Express } from "express";
+ import { env } from "./config/env";
+ import { authRouter } from "./modules/auth/auth.routes";
+ import { healthRouter } from "./modules/health/health.routes";
++import { onboardingRouter } from "./modules/onboarding/onboarding.routes";
+ import { notFoundHandler } from "./middleware/notFound";
+ import { errorHandler } from "./middleware/errorHandler";
+ 
+@@ -27,6 +28,7 @@ export function createApp(): Express {
+   // Routes
+   app.use("/api/v1/health", healthRouter);
+   app.use("/api/v1/auth", authRouter);
++  app.use("/api/v1/onboarding", onboardingRouter);
+ 
+   // These two MUST stay last, in this order.
+   app.use(notFoundHandler);
+diff --git a/server/src/modules/auth/auth.service.ts b/server/src/modules/auth/auth.service.ts
+index fcde593..d636422 100644
+--- a/server/src/modules/auth/auth.service.ts
++++ b/server/src/modules/auth/auth.service.ts
+@@ -1,5 +1,6 @@
+ import { prisma } from "../../db/prisma";
+ import { AppError } from "../../utils/appError";
++import { authUserSelect } from "./auth.types";
+ import type { AuthUser } from "./auth.types";
+ import type { LoginInput, RegisterInput } from "./auth.schema";
+ import {
+@@ -29,7 +30,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthUser> {
+     // ("Check first, then insert" can fail when two requests arrive together.)
+     return await prisma.user.create({
+       data: { email: input.email, passwordHash },
+-      select: { id: true, email: true, createdAt: true },
++      select: authUserSelect,
+     });
+   } catch (error: unknown) {
+     if (isUniqueConstraintError(error)) {
+@@ -52,7 +53,7 @@ interface LoginResult {
+ export async function loginUser(input: LoginInput): Promise<LoginResult> {
+   const found = await prisma.user.findUnique({
+     where: { email: input.email },
+-    select: { id: true, email: true, createdAt: true, passwordHash: true },
++    select: { ...authUserSelect, passwordHash: true },
+   });
+ 
+   // ALWAYS do exactly one password check, even if the email is unknown.
+@@ -72,8 +73,14 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
+ 
+   const session = await createSession(found.id);
+ 
+-  return {
+-    user: { id: found.id, email: found.email, createdAt: found.createdAt },
+-    session,
++  // Build the user by hand so the password hash can never slip through.
++  const user: AuthUser = {
++    id: found.id,
++    email: found.email,
++    createdAt: found.createdAt,
++    capabilities: found.capabilities,
++    onboardedAt: found.onboardedAt,
+   };
++
++  return { user, session };
+ }
+diff --git a/server/src/modules/auth/auth.types.ts b/server/src/modules/auth/auth.types.ts
+index 6d3d7d7..85e36a5 100644
+--- a/server/src/modules/auth/auth.types.ts
++++ b/server/src/modules/auth/auth.types.ts
+@@ -1,7 +1,22 @@
++import type { Capability } from "../onboarding/onboarding.options";
++
+ // The only user fields we ever send to the client.
+ // Note: no password and no passwordHash.
+ export interface AuthUser {
+   id: string;
+   email: string;
+   createdAt: Date;
++  capabilities: Capability[];
++  // null until the person finishes onboarding
++  onboardedAt: Date | null;
+ }
++
++// The database fields that make up an AuthUser.
++// Use this everywhere a user is loaded to be sent to the client.
++export const authUserSelect = {
++  id: true,
++  email: true,
++  createdAt: true,
++  capabilities: true,
++  onboardedAt: true,
++} as const;
+diff --git a/server/src/modules/auth/session.service.ts b/server/src/modules/auth/session.service.ts
+index 32d00c9..8a8d6fa 100644
+--- a/server/src/modules/auth/session.service.ts
++++ b/server/src/modules/auth/session.service.ts
+@@ -1,5 +1,6 @@
+ import { createHash, randomBytes } from "node:crypto";
+ import { prisma } from "../../db/prisma";
++import { authUserSelect } from "./auth.types";
+ import type { AuthUser } from "./auth.types";
+ 
+ export const SESSION_COOKIE_NAME = "sb_session";
+@@ -35,7 +36,7 @@ export async function findUserBySessionToken(
+     where: { tokenHash: hashToken(token) },
+     select: {
+       expiresAt: true,
+-      user: { select: { id: true, email: true, createdAt: true } },
++      user: { select: authUserSelect },
+     },
+   });
+ 

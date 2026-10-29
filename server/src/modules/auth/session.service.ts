@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "../../db/prisma";
+import { authUserSelect } from "./auth.types";
 import type { AuthUser } from "./auth.types";
 
 export const SESSION_COOKIE_NAME = "sb_session";
@@ -35,7 +36,7 @@ export async function findUserBySessionToken(
     where: { tokenHash: hashToken(token) },
     select: {
       expiresAt: true,
-      user: { select: { id: true, email: true, createdAt: true } },
+      user: { select: authUserSelect },
     },
   });
 

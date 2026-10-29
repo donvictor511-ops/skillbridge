@@ -2,12 +2,14 @@ import { createBrowserRouter } from "react-router";
 import type { RouteObject } from "react-router";
 import { paths } from "./paths";
 import { GuestRoute } from "../features/auth/GuestRoute";
+import { OnboardedRoute } from "../features/auth/OnboardedRoute";
 import { ProtectedRoute } from "../features/auth/ProtectedRoute";
 import PublicLayout from "../layouts/PublicLayout";
 import LandingPage from "../pages/LandingPage";
 import DashboardPage from "../pages/DashboardPage";
 import DesignPreviewPage from "../pages/DesignPreviewPage";
 import LoginPage from "../pages/LoginPage";
+import OnboardingPage from "../pages/OnboardingPage";
 import RegisterPage from "../pages/RegisterPage";
 import AccessDeniedPage from "../pages/AccessDeniedPage";
 import NotFoundPage from "../pages/NotFoundPage";
@@ -44,7 +46,16 @@ export const router = createBrowserRouter([
           {
             // Everything inside here needs a logged-in user.
             element: <ProtectedRoute />,
-            children: [{ path: paths.dashboard, element: <DashboardPage /> }],
+            children: [
+              { path: paths.onboarding, element: <OnboardingPage /> },
+              {
+                // ...and a finished setup (otherwise: sent to /onboarding).
+                element: <OnboardedRoute />,
+                children: [
+                  { path: paths.dashboard, element: <DashboardPage /> },
+                ],
+              },
+            ],
           },
           // The catch-all: any URL that matched nothing above.
           { path: "*", element: <NotFoundPage /> },

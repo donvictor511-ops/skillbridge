@@ -9,13 +9,24 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AccountType {
+  professional
+  client
+
+  @@map("account_type")
+}
+
 model User {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  capabilities AccountType[] @default([])
+  onboardedAt  DateTime?     @map("onboarded_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
   sessions     Session[]
+  profile      Profile?
+  skills       UserSkill[]
 
   @@map("users")
 }
@@ -30,4 +41,41 @@ model Session {
 
   @@index([userId])
   @@map("sessions")
+}
+
+model Profile {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @unique @map("user_id") @db.Uuid
+  displayName String   @map("display_name")
+  headline    String?
+  location    String?
+  interests   String[] @default([])
+  goals       String[] @default([])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Skill {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  nameKey   String      @unique @map("name_key")
+  createdAt DateTime    @default(now()) @map("created_at")
+  users     UserSkill[]
+
+  @@map("skills")
+}
+
+model UserSkill {
+  userId    String   @map("user_id") @db.Uuid
+  skillId   String   @map("skill_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([userId, skillId])
+  @@index([skillId])
+  @@map("user_skills")
 }

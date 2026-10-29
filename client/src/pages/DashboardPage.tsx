@@ -1,12 +1,22 @@
 import type { ReactElement } from "react";
 import { Badge, Button, ErrorMessage } from "../components/ui";
 import { useCurrentUser, useLogout } from "../features/auth/authQueries";
+import { capabilityOptions } from "../features/onboarding/onboardingOptions";
 
 // TEMPORARY content: this page only proves that protected routes work.
 // The real dashboard is built later.
 export default function DashboardPage(): ReactElement {
   const { data: user } = useCurrentUser();
   const logoutMutation = useLogout();
+
+  const accountTypes =
+    user?.capabilities
+      .map(
+        (capability) =>
+          capabilityOptions.find((option) => option.value === capability)
+            ?.label ?? capability,
+      )
+      .join(" and ") ?? "";
 
   function handleLogout(): void {
     // After logging out, ProtectedRoute notices there is no user and
@@ -24,9 +34,13 @@ export default function DashboardPage(): ReactElement {
         Signed in as{" "}
         <span className="font-semibold text-ink">{user?.email}</span>
       </p>
+      <p className="mt-1 text-muted">
+        Account type:{" "}
+        <span className="font-semibold text-ink">{accountTypes}</span>
+      </p>
       <p className="mt-2 text-sm text-muted">
         The real dashboard comes later. This page only proves that protected
-        routes work.
+        routes and onboarding work.
       </p>
 
       {logoutMutation.isError ? (

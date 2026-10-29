@@ -29,3 +29,24 @@ Notes:
 | expires_at | timestamp | 7 days after login                                                     |
 
 Expired rows are ignored when reading. A cleanup job comes later.
+
+## users (new columns)
+
+- `capabilities` account_type[]: what the account can do (`professional`, `client`).
+  Strict database enum, because it affects permissions.
+- `onboarded_at` timestamp, null until onboarding is finished.
+
+## profiles
+
+One per user (`user_id` unique, cascade delete): `display_name`, `headline`,
+`location`, `interests` text[], `goals` text[], timestamps.
+Part 4 adds bio, experience, education, portfolio, and visibility.
+
+## skills
+
+Shared catalog: `name` (display text) and `name_key` (lowercase, unique).
+
+## user_skills
+
+Join table. Composite primary key (`user_id`, `skill_id`): the same skill
+cannot be added twice. Index on `skill_id`. Cascade delete.

@@ -48,3 +48,20 @@ Public and safe to repeat. Ends the session and clears the cookie. Returns 204.
 
 Requires a session. Returns 200 `{ "data": { "user": {...} } }`, or
 401 `UNAUTHENTICATED`.
+
+## POST /onboarding
+
+Requires a session. Completes account setup in one transaction.
+
+Body: `capabilities` (1-2 of professional, client), `displayName` (1-80),
+`headline` (optional, max 120), `location` (optional, max 80),
+`skills` (0-15 names, max 40 characters each), `interests` (0-8 codes),
+`goals` (1+ codes).
+
+- 201: `{ "data": { "user": {..., "capabilities", "onboardedAt" } } }`
+- 400 `VALIDATION_ERROR` (with `details`, for example field `skills.2`)
+- 401 `UNAUTHENTICATED`
+- 409 `ONBOARDING_ALREADY_COMPLETED`
+
+`GET /auth/me` and the login/register responses now include `capabilities`
+and `onboardedAt`.

@@ -1,0 +1,1 @@
+-- Placeholder: original applied migration file needs to be recovered.

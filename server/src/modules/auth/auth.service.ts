@@ -1,5 +1,6 @@
 import { prisma } from "../../db/prisma";
 import { AppError } from "../../utils/appError";
+import { authUserSelect } from "./auth.types";
 import type { AuthUser } from "./auth.types";
 import type { LoginInput, RegisterInput } from "./auth.schema";
 import {
@@ -29,7 +30,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthUser> {
     // ("Check first, then insert" can fail when two requests arrive together.)
     return await prisma.user.create({
       data: { email: input.email, passwordHash },
-      select: { id: true, email: true, createdAt: true },
+      select: authUserSelect,
     });
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
@@ -52,7 +53,7 @@ interface LoginResult {
 export async function loginUser(input: LoginInput): Promise<LoginResult> {
   const found = await prisma.user.findUnique({
     where: { email: input.email },
-    select: { id: true, email: true, createdAt: true, passwordHash: true },
+    select: { ...authUserSelect, passwordHash: true },
   });
 
   // ALWAYS do exactly one password check, even if the email is unknown.
@@ -72,8 +73,14 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
 
   const session = await createSession(found.id);
 
-  return {
-    user: { id: found.id, email: found.email, createdAt: found.createdAt },
-    session,
+  // Build the user by hand so the password hash can never slip through.
+  const user: AuthUser = {
+    id: found.id,
+    email: found.email,
+    createdAt: found.createdAt,
+    capabilities: found.capabilities,
+    onboardedAt: found.onboardedAt,
   };
+
+  return { user, session };
 }

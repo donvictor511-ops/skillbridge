@@ -5,6 +5,7 @@ import type { Express } from "express";
 import { env } from "./config/env";
 import { authRouter } from "./modules/auth/auth.routes";
 import { healthRouter } from "./modules/health/health.routes";
+import { onboardingRouter } from "./modules/onboarding/onboarding.routes";
 import { notFoundHandler } from "./middleware/notFound";
 import { errorHandler } from "./middleware/errorHandler";
 
@@ -27,6 +28,7 @@ export function createApp(): Express {
   // Routes
   app.use("/api/v1/health", healthRouter);
   app.use("/api/v1/auth", authRouter);
+  app.use("/api/v1/onboarding", onboardingRouter);
 
   // These two MUST stay last, in this order.
   app.use(notFoundHandler);
