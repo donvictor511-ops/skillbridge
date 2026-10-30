@@ -16,17 +16,36 @@ enum AccountType {
   @@map("account_type")
 }
 
+enum ProfileVisibility {
+  public
+  members
+  private
+
+  @@map("profile_visibility")
+}
+
+enum BusinessSizeRange {
+  size_1_10     @map("1-10")
+  size_11_50    @map("11-50")
+  size_51_200   @map("51-200")
+  size_201_500  @map("201-500")
+  size_501_plus @map("501+")
+
+  @@map("business_size_range")
+}
+
 model User {
-  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email        String        @unique
-  passwordHash String        @map("password_hash")
-  capabilities AccountType[] @default([])
-  onboardedAt  DateTime?     @map("onboarded_at")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  sessions     Session[]
-  profile      Profile?
-  skills       UserSkill[]
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String           @unique
+  passwordHash    String           @map("password_hash")
+  capabilities    AccountType[]    @default([])
+  onboardedAt     DateTime?        @map("onboarded_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  sessions        Session[]
+  profile         Profile?
+  skills          UserSkill[]
+  businessProfile BusinessProfile?
 
   @@map("users")
 }
@@ -44,26 +63,34 @@ model Session {
 }
 
 model Profile {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String   @unique @map("user_id") @db.Uuid
-  displayName String   @map("display_name")
-  headline    String?
-  location    String?
-  interests   String[] @default([])
-  goals       String[] @default([])
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String             @unique @map("user_id") @db.Uuid
+  displayName      String             @map("display_name")
+  headline         String?
+  location         String?
+  bio              String?            @db.VarChar(2000)
+  avatarUrl        String?            @map("avatar_url") @db.VarChar(2048)
+  coverUrl         String?            @map("cover_url") @db.VarChar(2048)
+  visibility       ProfileVisibility  @default(members)
+  interests        String[]           @default([])
+  goals            String[]           @default([])
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences      Experience[]
+  educationEntries EducationEntry[]
+  projects         PortfolioProject[]
 
   @@map("profiles")
 }
 
 model Skill {
-  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String
-  nameKey   String      @unique @map("name_key")
-  createdAt DateTime    @default(now()) @map("created_at")
+  nameKey   String                  @unique @map("name_key")
+  createdAt DateTime                @default(now()) @map("created_at")
   users     UserSkill[]
+  projects  PortfolioProjectSkill[]
 
   @@map("skills")
 }
@@ -78,4 +105,80 @@ model UserSkill {
   @@id([userId, skillId])
   @@index([skillId])
   @@map("user_skills")
+}
+
+model Experience {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId   String    @map("profile_id") @db.Uuid
+  title       String    @db.VarChar(100)
+  company     String    @db.VarChar(100)
+  location    String?   @db.VarChar(100)
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  description String?   @db.VarChar(2000)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("experiences")
+}
+
+model EducationEntry {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId    String   @map("profile_id") @db.Uuid
+  school       String   @db.VarChar(120)
+  degree       String?  @db.VarChar(100)
+  fieldOfStudy String?  @map("field_of_study") @db.VarChar(100)
+  startYear    Int?     @map("start_year") @db.SmallInt
+  endYear      Int?     @map("end_year") @db.SmallInt
+  description  String?  @db.VarChar(1000)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("education_entries")
+}
+
+model PortfolioProject {
+  id          String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId   String                  @map("profile_id") @db.Uuid
+  title       String                  @db.VarChar(100)
+  description String                  @db.VarChar(2000)
+  projectUrl  String?                 @map("project_url") @db.VarChar(2048)
+  imageUrl    String?                 @map("image_url") @db.VarChar(2048)
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+  profile     Profile                 @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skills      PortfolioProjectSkill[]
+
+  @@index([profileId])
+  @@map("portfolio_projects")
+}
+
+model PortfolioProjectSkill {
+  projectId String           @map("project_id") @db.Uuid
+  skillId   String           @map("skill_id") @db.Uuid
+  project   PortfolioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill     Skill            @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, skillId])
+  @@index([skillId])
+  @@map("portfolio_project_skills")
+}
+
+model BusinessProfile {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String             @unique @map("user_id") @db.Uuid
+  companyName String             @map("company_name") @db.VarChar(120)
+  websiteUrl  String?            @map("website_url") @db.VarChar(2048)
+  industry    String?            @db.VarChar(100)
+  sizeRange   BusinessSizeRange? @map("size_range")
+  about       String?            @db.VarChar(2000)
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("business_profiles")
 }

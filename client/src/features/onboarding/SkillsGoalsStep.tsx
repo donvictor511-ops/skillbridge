@@ -26,16 +26,22 @@ export function SkillsGoalsStep({
         onChange={(next) => onChange({ skills: next })}
       />
 
-      <ChoiceGroup
-        id="onboarding-interests"
-        legend="Interests (optional)"
-        hint={`Choose up to ${MAX_INTERESTS} topics you care about.`}
-        options={interestOptions}
-        selected={values.interests}
-        maxSelected={MAX_INTERESTS}
-        onChange={(next) => onChange({ interests: next })}
-        error={errors.interests}
-      />
+      <div className="space-y-2">
+        <ChoiceGroup
+          id="onboarding-interests"
+          legend="Interests (optional)"
+          hint={`Choose up to ${MAX_INTERESTS} topics you care about.`}
+          options={interestOptions}
+          selected={values.interests}
+          maxSelected={MAX_INTERESTS}
+          onChange={(next) => onChange({ interests: next })}
+          error={errors.interests}
+        />
+
+        <p className="text-sm text-gray-500">
+          {values.interests.length} of {MAX_INTERESTS} chosen
+        </p>
+      </div>
 
       <ChoiceGroup
         id="onboarding-goals"
