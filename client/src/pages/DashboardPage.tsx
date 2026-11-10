@@ -1,5 +1,12 @@
 import type { ReactElement } from "react";
-import { Badge, Button, ErrorMessage } from "../components/ui";
+import { Link } from "react-router";
+import { paths } from "../app/paths";
+import {
+  Badge,
+  Button,
+  ErrorMessage,
+  getButtonClasses,
+} from "../components/ui";
 import { useCurrentUser, useLogout } from "../features/auth/authQueries";
 import { capabilityOptions } from "../features/onboarding/onboardingOptions";
 
@@ -50,7 +57,28 @@ export default function DashboardPage(): ReactElement {
         />
       ) : null}
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <Link
+          to={paths.dashboard}
+          aria-current="page"
+          className={getButtonClasses({
+            variant: "secondary",
+            size: "md",
+            fullWidth: false,
+          })}
+        >
+          Dashboard Home
+        </Link>
+        <Link
+          to={paths.myProfile}
+          className={getButtonClasses({
+            variant: "primary",
+            size: "md",
+            fullWidth: false,
+          })}
+        >
+          View my profile
+        </Link>
         <Button
           variant="secondary"
           loading={logoutMutation.isPending}

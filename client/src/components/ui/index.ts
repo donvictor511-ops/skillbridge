@@ -22,3 +22,4 @@ export { Spinner } from "./Spinner";
 export type { SpinnerProps, SpinnerSize } from "./Spinner";
 export { Textarea } from "./Textarea";
 export type { TextareaProps } from "./Textarea";
+export { ExternalLink } from "./ExternalLink";

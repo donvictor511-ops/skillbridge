@@ -1,0 +1,128 @@
+import { prisma } from "../../db/prisma";
+import { AppError } from "../../utils/appError";
+import type { AuthUser } from "../auth/auth.types";
+import { uniqueSkills } from "../skills/skill.utils";
+import { decideProfileAccess } from "./profile.access";
+import {
+  findProfileRow,
+  toOwnerProfile,
+  toPublicProfile,
+} from "./profile.queries";
+import type { UpdateProfileInput } from "./profile.schema";
+import type { OwnerProfile, PublicProfile } from "./profile.types";
+
+export function profileNotFound(): AppError {
+  return new AppError(404, "PROFILE_NOT_FOUND", "Profile not found.");
+}
+
+// P2025 is Prisma's code for "the record to update does not exist".
+function isRecordNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2025"
+  );
+}
+
+// Your own profile, with private fields.
+export async function getOwnerProfile(userId: string): Promise<OwnerProfile> {
+  const row = await findProfileRow(userId);
+
+  if (!row) {
+    throw profileNotFound();
+  }
+
+  return toOwnerProfile(row);
+}
+
+// Someone's profile as the CURRENT VISITOR is allowed to see it.
+// "viewer" is undefined for a logged-out visitor.
+export async function getProfileForViewer(
+  targetUserId: string,
+  viewer: AuthUser | undefined,
+): Promise<PublicProfile> {
+  const row = await findProfileRow(targetUserId);
+
+  if (!row) {
+    throw profileNotFound();
+  }
+
+  const access = decideProfileAccess(
+    row.visibility,
+    viewer?.id === row.userId,
+    viewer !== undefined,
+  );
+
+  if (access === "not_found") {
+    throw profileNotFound();
+  }
+
+  if (access === "login_required") {
+    throw new AppError(401, "LOGIN_REQUIRED", "Log in to view this profile.");
+  }
+
+  // The public shape is used even when the owner views their own page here.
+  return toPublicProfile(row);
+}
+
+// Updates the basics of the CURRENT USER's profile. The user id comes from the
+// session. Fields left out are unchanged (Prisma ignores undefined).
+export async function updateProfileBasics(
+  userId: string,
+  input: UpdateProfileInput,
+): Promise<OwnerProfile> {
+  try {
+    await prisma.profile.update({ where: { userId }, data: input });
+  } catch (error: unknown) {
+    if (isRecordNotFoundError(error)) {
+      throw profileNotFound();
+    }
+    throw error;
+  }
+
+  return getOwnerProfile(userId);
+}
+
+// Replaces the CURRENT USER's whole skills list with the given names.
+export async function replaceUserSkills(
+  userId: string,
+  names: string[],
+): Promise<OwnerProfile> {
+  const profile = await prisma.profile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  if (!profile) {
+    throw profileNotFound();
+  }
+
+  const skills = uniqueSkills(names);
+
+  // One transaction: the list is replaced completely, or not at all.
+  await prisma.$transaction(async (tx) => {
+    const skillIds: string[] = [];
+
+    for (const skill of skills) {
+      const saved = await tx.skill.upsert({
+        where: { nameKey: skill.nameKey },
+        create: { name: skill.name, nameKey: skill.nameKey },
+        update: {},
+        select: { id: true },
+      });
+      skillIds.push(saved.id);
+    }
+
+    // Remove skills that are no longer in the list, then add the new ones.
+    await tx.userSkill.deleteMany({
+      where: { userId, skillId: { notIn: skillIds } },
+    });
+    await tx.userSkill.createMany({
+      data: skillIds.map((skillId) => ({ userId, skillId })),
+      skipDuplicates: true,
+    });
+  });
+
+  return getOwnerProfile(userId);
+}

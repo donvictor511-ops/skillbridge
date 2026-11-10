@@ -65,3 +65,58 @@ Body: `capabilities` (1-2 of professional, client), `displayName` (1-80),
 
 `GET /auth/me` and the login/register responses now include `capabilities`
 and `onboardedAt`.
+
+## Profiles
+
+Profile responses are sent with `Cache-Control: private, no-store`.
+
+### GET /profiles/me
+
+Requires a session. Returns `{ "data": { "profile": OwnerProfile } }`: everything
+public, plus `visibility`, `goals`, `createdAt`, `updatedAt`.
+404 `PROFILE_NOT_FOUND` if onboarding has not created a profile yet.
+
+### PATCH /profiles/me
+
+Requires a session. Edits only the caller's own profile (the id comes from the
+session). All fields optional, at least one required: `displayName`, `headline`,
+`location`, `bio`, `avatarUrl`, `coverUrl`, `visibility`, `interests`, `goals`.
+`null` or `""` clears an optional text field. Links must be `https://`.
+Unknown fields are ignored. Returns the updated OwnerProfile.
+
+### PUT /profiles/me/skills
+
+Requires a session. Body `{ "skills": ["React", ...] }` (max 15). Replaces the
+whole list. Returns the updated OwnerProfile.
+
+### GET /profiles/:userId
+
+Public endpoint with privacy rules (optional session).
+
+- `public`: anyone. `members`: logged-in users only (otherwise 401
+  `LOGIN_REQUIRED`). `private`: only the owner (others get 404).
+- The owner can always view their own profile.
+- A malformed or unknown id gives 404 `PROFILE_NOT_FOUND`.
+- Returns `{ "data": { "profile": PublicProfile } }`. Never includes email,
+  goals, visibility, or timestamps.
+
+### Experience and education (your own profile)
+
+All require a session. Each returns the updated OwnerProfile
+(`{ "data": { "profile": ... } }`): 201 for create, 200 for replace and delete.
+
+- `POST /profiles/me/experiences`, `PUT /profiles/me/experiences/:experienceId`,
+  `DELETE /profiles/me/experiences/:experienceId`
+  Body: `title` (1-100), `company` (1-100), `location` (optional, max 100),
+  `startDate` ("YYYY-MM"), `endDate` ("YYYY-MM", or null/missing = current),
+  `description` (optional, max 2000). Max 20 per profile.
+- `POST /profiles/me/education`, `PUT /profiles/me/education/:educationId`,
+  `DELETE /profiles/me/education/:educationId`
+  Body: `school` (1-120), `degree`, `fieldOfStudy` (optional, max 100),
+  `startYear`, `endYear` (integers 1900-2100, optional), `description`
+  (optional, max 1000). Max 10 per profile.
+
+`PUT` replaces the whole entry. Ownership is checked inside the database
+command. An id that is malformed, missing, or someone else's gives 404
+`EXPERIENCE_NOT_FOUND` / `EDUCATION_NOT_FOUND`. Errors: 400 `VALIDATION_ERROR`,
+401 `UNAUTHENTICATED`, 409 `LIMIT_REACHED`.

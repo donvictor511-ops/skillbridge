@@ -12,7 +12,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:check": "tsx src/db/checkConnection.ts",
-    "test:smoke": "bash scripts/smoke-auth.sh"
+    "test:smoke": "bash scripts/smoke-auth.sh",
+    "test:smoke:profiles": "bash scripts/smoke-profiles.sh",
+    "test:smoke:profile-sections": "bash scripts/smoke-profile-sections.sh"
   },
   "keywords": [],
   "author": "",

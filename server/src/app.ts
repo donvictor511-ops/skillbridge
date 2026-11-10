@@ -6,6 +6,7 @@ import { env } from "./config/env";
 import { authRouter } from "./modules/auth/auth.routes";
 import { healthRouter } from "./modules/health/health.routes";
 import { onboardingRouter } from "./modules/onboarding/onboarding.routes";
+import { profileRouter } from "./modules/profiles/profile.routes";
 import { notFoundHandler } from "./middleware/notFound";
 import { errorHandler } from "./middleware/errorHandler";
 
@@ -15,21 +16,9 @@ export function createApp(): Express {
   // Do not advertise which framework we use.
   app.disable("x-powered-by");
 
-  // Only our own website may call this API from a browser.
-  // Allow requests without an Origin header (e.g. curl and server-to-server).
-  // Reject browser requests from other origins.
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin || origin === env.clientOrigin) {
-          callback(null, true);
-        } else {
-          callback(null, false);
-        }
-      },
-      credentials: true,
-    }),
-  );
+  // Only our own website may call this API from a browser, and it may send
+  // cookies. Never use "*" together with cookies.
+  app.use(cors({ origin: env.clientOrigin, credentials: true }));
 
   // Read JSON request bodies. The small limit blocks oversized requests.
   app.use(express.json({ limit: "10kb" }));
@@ -41,6 +30,7 @@ export function createApp(): Express {
   app.use("/api/v1/health", healthRouter);
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/onboarding", onboardingRouter);
+  app.use("/api/v1/profiles", profileRouter);
 
   // These two MUST stay last, in this order.
   app.use(notFoundHandler);

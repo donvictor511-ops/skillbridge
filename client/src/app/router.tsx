@@ -9,7 +9,9 @@ import LandingPage from "../pages/LandingPage";
 import DashboardPage from "../pages/DashboardPage";
 import DesignPreviewPage from "../pages/DesignPreviewPage";
 import LoginPage from "../pages/LoginPage";
+import MyProfilePage from "../pages/MyProfilePage";
 import OnboardingPage from "../pages/OnboardingPage";
+import ProfilePage from "../pages/ProfilePage";
 import RegisterPage from "../pages/RegisterPage";
 import AccessDeniedPage from "../pages/AccessDeniedPage";
 import NotFoundPage from "../pages/NotFoundPage";
@@ -35,6 +37,8 @@ export const router = createBrowserRouter([
           { path: paths.home, element: <LandingPage /> },
           ...developmentOnlyRoutes,
           { path: paths.accessDenied, element: <AccessDeniedPage /> },
+          // Anyone can open this URL. The API decides what they may see.
+          { path: paths.profilePattern, element: <ProfilePage /> },
           {
             // Only for logged-out visitors. Logged-in people are redirected.
             element: <GuestRoute />,
@@ -53,6 +57,9 @@ export const router = createBrowserRouter([
                 element: <OnboardedRoute />,
                 children: [
                   { path: paths.dashboard, element: <DashboardPage /> },
+                  // "/profile/me" is more specific than "/profile/:userId",
+                  // so the router picks this one for your own profile.
+                  { path: paths.myProfile, element: <MyProfilePage /> },
                 ],
               },
             ],

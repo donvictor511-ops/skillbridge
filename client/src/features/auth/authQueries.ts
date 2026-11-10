@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { profileRootKey } from "../../lib/queryKeys";
 import {
   getCurrentUser,
   login,
@@ -52,6 +53,9 @@ export function useLogout() {
     onSuccess: () => {
       // The server ended the session. Remember that in the cache too.
       queryClient.setQueryData(authKeys.me, null);
+      // Forget every cached profile, so a members-only profile cannot be
+      // shown again from memory (for example with the Back button).
+      queryClient.removeQueries({ queryKey: profileRootKey });
     },
   });
 }

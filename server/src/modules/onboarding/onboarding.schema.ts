@@ -1,11 +1,11 @@
 import { z } from "zod";
+import { skillNameSchema } from "../skills/skill.schema";
 import {
   CAPABILITIES,
   GOALS,
   INTERESTS,
   MAX_INTERESTS,
   MAX_SKILLS,
-  MAX_SKILL_LENGTH,
 } from "./onboarding.options";
 
 function collapseSpaces(value: string): string {
@@ -15,26 +15,6 @@ function collapseSpaces(value: string): string {
 function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
-
-// A skill is plain text: letters, numbers, spaces, and a few symbols that real
-// skills use (C++, C#, .NET, Node.js, UI/UX). Everything else is rejected.
-const skillNameSchema = z
-  .string("Each skill must be text.")
-  .trim()
-  .min(1, "Skill names cannot be empty.")
-  .max(
-    MAX_SKILL_LENGTH,
-    `Skill names must be at most ${MAX_SKILL_LENGTH} characters.`,
-  )
-  .regex(
-    /^[\p{L}\p{N}+#.&\/_ '-]+$/u,
-    "Skill names may use letters, numbers, spaces, and + # . & / _ ' - only.",
-  )
-  .refine(
-    (value) => /[\p{L}\p{N}]/u.test(value),
-    "A skill name needs at least one letter or number.",
-  )
-  .transform(collapseSpaces);
 
 // Optional text: empty becomes null.
 function optionalText(maxLength: number, label: string) {

@@ -57,6 +57,7 @@ export function Avatar({
           src={imageSrc}
           alt={`Profile photo of ${name}`}
           loading="lazy"
+          referrerPolicy="no-referrer"
           onError={() => setFailedSrc(imageSrc)}
           className="h-full w-full object-cover"
         />
