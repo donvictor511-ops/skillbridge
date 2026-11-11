@@ -8,6 +8,7 @@ import PublicLayout from "../layouts/PublicLayout";
 import LandingPage from "../pages/LandingPage";
 import DashboardPage from "../pages/DashboardPage";
 import DesignPreviewPage from "../pages/DesignPreviewPage";
+import EditProfilePage from "../pages/EditProfilePage";
 import LoginPage from "../pages/LoginPage";
 import MyProfilePage from "../pages/MyProfilePage";
 import OnboardingPage from "../pages/OnboardingPage";
@@ -57,9 +58,10 @@ export const router = createBrowserRouter([
                 element: <OnboardedRoute />,
                 children: [
                   { path: paths.dashboard, element: <DashboardPage /> },
-                  // "/profile/me" is more specific than "/profile/:userId",
-                  // so the router picks this one for your own profile.
+                  // "/profile/me" and "/profile/edit" are more specific than
+                  // "/profile/:userId", so the router picks these for them.
                   { path: paths.myProfile, element: <MyProfilePage /> },
+                  { path: paths.editProfile, element: <EditProfilePage /> },
                 ],
               },
             ],

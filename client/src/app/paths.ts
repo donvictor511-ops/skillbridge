@@ -6,6 +6,7 @@ export const paths = {
   onboarding: "/onboarding",
   dashboard: "/dashboard",
   myProfile: "/profile/me",
+  editProfile: "/profile/edit",
   // The pattern used by the router. Use profilePath() to build a real link.
   profilePattern: "/profile/:userId",
   accessDenied: "/access-denied",

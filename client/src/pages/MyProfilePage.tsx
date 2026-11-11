@@ -1,5 +1,8 @@
 import type { ReactElement } from "react";
-import { ErrorMessage } from "../components/ui";
+import { Link } from "react-router";
+import { Pencil } from "lucide-react";
+import { paths } from "../app/paths";
+import { ErrorMessage, getButtonClasses } from "../components/ui";
 import { useMyProfile } from "../features/profiles/profileQueries";
 import { ProfileSkeleton } from "../features/profiles/ProfileStates";
 import { ProfileView } from "../features/profiles/ProfileView";
@@ -26,10 +29,25 @@ export default function MyProfilePage(): ReactElement {
       ) : null}
 
       {profileQuery.data ? (
-        <ProfileView
-          profile={profileQuery.data}
-          owner={{ visibility: profileQuery.data.visibility }}
-        />
+        <>
+          <div className="mb-4 flex justify-end">
+            <Link
+              to={paths.editProfile}
+              className={getButtonClasses({
+                variant: "primary",
+                size: "md",
+                fullWidth: false,
+              })}
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              Edit profile
+            </Link>
+          </div>
+          <ProfileView
+            profile={profileQuery.data}
+            owner={{ visibility: profileQuery.data.visibility }}
+          />
+        </>
       ) : null}
     </div>
   );
