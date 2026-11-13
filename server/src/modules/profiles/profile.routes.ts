@@ -8,6 +8,13 @@ import {
   updateMySkills,
 } from "./profile.controller";
 import {
+  createProjectHandler,
+  deleteBusinessHandler,
+  deleteProjectHandler,
+  replaceProjectHandler,
+  saveBusinessHandler,
+} from "./profile.portfolio.controller";
+import {
   createEducationHandler,
   createExperienceHandler,
   deleteEducationHandler,
@@ -51,5 +58,22 @@ profileRouter.delete(
   requireAuth,
   deleteEducationHandler,
 );
+
+// Portfolio projects (your own work)
+profileRouter.post("/me/projects", requireAuth, createProjectHandler);
+profileRouter.put(
+  "/me/projects/:projectId",
+  requireAuth,
+  replaceProjectHandler,
+);
+profileRouter.delete(
+  "/me/projects/:projectId",
+  requireAuth,
+  deleteProjectHandler,
+);
+
+// Company details (client or business accounts)
+profileRouter.put("/me/business", requireAuth, saveBusinessHandler);
+profileRouter.delete("/me/business", requireAuth, deleteBusinessHandler);
 
 profileRouter.get("/:userId", optionalAuth, getProfileById);

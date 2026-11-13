@@ -17,7 +17,7 @@ function collapseSpaces(value: string): string {
 }
 
 // Required single-line text: trimmed, repeated spaces collapsed.
-function requiredText(maxLength: number, label: string) {
+export function requiredText(maxLength: number, label: string) {
   return z
     .string(`${label} is required.`)
     .trim()
@@ -27,7 +27,7 @@ function requiredText(maxLength: number, label: string) {
 }
 
 // Optional single-line text: missing, null, or "" all become null.
-function optionalLine(maxLength: number, label: string) {
+export function optionalLine(maxLength: number, label: string) {
   return z
     .string()
     .trim()
@@ -37,7 +37,7 @@ function optionalLine(maxLength: number, label: string) {
 }
 
 // Optional paragraph: keeps line breaks, but not endless blank lines.
-function optionalParagraph(maxLength: number, label: string) {
+export function optionalParagraph(maxLength: number, label: string) {
   return z
     .string()
     .trim()

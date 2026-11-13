@@ -114,10 +114,21 @@ export async function replaceUserSkills(
       skillIds.push(saved.id);
     }
 
-    // Remove skills that are no longer in the list, then add the new ones.
+    // Remove skills that are no longer in the list.
     await tx.userSkill.deleteMany({
       where: { userId, skillId: { notIn: skillIds } },
     });
+
+    // A skill you no longer list can no longer be "proven" by a project of
+    // yours, so remove those project links too.
+    await tx.portfolioProjectSkill.deleteMany({
+      where: {
+        skillId: { notIn: skillIds },
+        project: { profile: { userId } },
+      },
+    });
+
+    // Add the new ones.
     await tx.userSkill.createMany({
       data: skillIds.map((skillId) => ({ userId, skillId })),
       skipDuplicates: true,

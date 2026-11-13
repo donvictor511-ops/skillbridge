@@ -22,7 +22,7 @@ export function educationNotFound(): AppError {
 
 // The id of the profile that belongs to the logged-in user. Everything below
 // is scoped to THIS profile, so nobody can touch someone else's entries.
-async function getOwnProfileId(userId: string): Promise<string> {
+export async function getOwnProfileId(userId: string): Promise<string> {
   const profile = await prisma.profile.findUnique({
     where: { userId },
     select: { id: true },

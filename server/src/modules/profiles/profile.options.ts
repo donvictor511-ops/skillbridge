@@ -20,3 +20,21 @@ export const MAX_FIELD_OF_STUDY = 100;
 export const MAX_EDUCATION_DESCRIPTION = 1000;
 export const MIN_YEAR = 1900;
 export const MAX_YEAR = 2100;
+
+// Portfolio projects
+export const MAX_PROJECTS = 20;
+export const MAX_PROJECT_SKILLS = 10;
+export const MAX_PROJECT_TITLE = 100;
+export const MAX_PROJECT_DESCRIPTION = 2000;
+
+// Company details (client or business accounts)
+export const MAX_COMPANY_NAME = 120;
+export const MAX_INDUSTRY = 100;
+export const MAX_COMPANY_ABOUT = 2000;
+export const COMPANY_SIZE_RANGES = [
+  "1-10",
+  "11-50",
+  "51-200",
+  "201-500",
+  "501+",
+] as const;

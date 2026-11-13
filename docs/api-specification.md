@@ -120,3 +120,26 @@ All require a session. Each returns the updated OwnerProfile
 command. An id that is malformed, missing, or someone else's gives 404
 `EXPERIENCE_NOT_FOUND` / `EDUCATION_NOT_FOUND`. Errors: 400 `VALIDATION_ERROR`,
 401 `UNAUTHENTICATED`, 409 `LIMIT_REACHED`.
+
+### Portfolio projects (your own profile)
+
+All require a session. Each returns the updated OwnerProfile.
+
+- `POST /profiles/me/projects` (201), `PUT /profiles/me/projects/:projectId` (200),
+  `DELETE /profiles/me/projects/:projectId` (200)
+  Body: `title` (1-100), `description` (1-2000, required), `projectUrl` and
+  `imageUrl` (optional, `https://` only), `skillIds` (up to 10 ids of skills on
+  the caller's OWN profile). Max 20 projects per profile.
+  A skill id that is not on the caller's skill list gives 400 `VALIDATION_ERROR`
+  with detail field `skillIds`. Someone else's or unknown project: 404
+  `PROJECT_NOT_FOUND`. Over the limit: 409 `LIMIT_REACHED`.
+  Removing a skill from the profile also removes it from the caller's projects.
+
+### Company details (client or business accounts)
+
+- `PUT /profiles/me/business` creates or updates the caller's company details.
+  Body: `companyName` (1-120), `websiteUrl` (optional, https), `industry`
+  (optional), `sizeRange` (optional: `1-10`, `11-50`, `51-200`, `201-500`,
+  `501+`), `about` (optional, max 2000). Needs the `client` capability, otherwise
+  403 `NOT_A_BUSINESS_ACCOUNT`.
+- `DELETE /profiles/me/business` removes the caller's own company details.
