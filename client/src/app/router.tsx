@@ -12,6 +12,7 @@ import EditProfilePage from "../pages/EditProfilePage";
 import LoginPage from "../pages/LoginPage";
 import MyProfilePage from "../pages/MyProfilePage";
 import OnboardingPage from "../pages/OnboardingPage";
+import PreviewProfilePage from "../pages/PreviewProfilePage";
 import ProfilePage from "../pages/ProfilePage";
 import RegisterPage from "../pages/RegisterPage";
 import AccessDeniedPage from "../pages/AccessDeniedPage";
@@ -58,10 +59,15 @@ export const router = createBrowserRouter([
                 element: <OnboardedRoute />,
                 children: [
                   { path: paths.dashboard, element: <DashboardPage /> },
-                  // "/profile/me" and "/profile/edit" are more specific than
-                  // "/profile/:userId", so the router picks these for them.
+                  // "/profile/me", "/profile/edit", and "/profile/preview" are
+                  // more specific than "/profile/:userId", so the router picks
+                  // these for them.
                   { path: paths.myProfile, element: <MyProfilePage /> },
                   { path: paths.editProfile, element: <EditProfilePage /> },
+                  {
+                    path: paths.previewProfile,
+                    element: <PreviewProfilePage />,
+                  },
                 ],
               },
             ],

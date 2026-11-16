@@ -3,8 +3,10 @@ import { Link } from "react-router";
 import { paths } from "../app/paths";
 import { ErrorMessage, getButtonClasses } from "../components/ui";
 import { BasicsForm } from "../features/profiles/edit/BasicsForm";
+import { BusinessForm } from "../features/profiles/edit/BusinessForm";
 import { EducationManager } from "../features/profiles/edit/EducationManager";
 import { ExperienceManager } from "../features/profiles/edit/ExperienceManager";
+import { ProjectsManager } from "../features/profiles/edit/ProjectsManager";
 import { SkillsEditor } from "../features/profiles/edit/SkillsEditor";
 import { useMyProfile } from "../features/profiles/profileQueries";
 import { ProfileSkeleton } from "../features/profiles/ProfileStates";
@@ -26,16 +28,28 @@ export default function EditProfilePage(): ReactElement {
             Each section saves on its own. Nothing changes until you press Save.
           </p>
         </div>
-        <Link
-          to={paths.myProfile}
-          className={getButtonClasses({
-            variant: "secondary",
-            size: "md",
-            fullWidth: false,
-          })}
-        >
-          Back to profile
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link
+            to={paths.previewProfile}
+            className={getButtonClasses({
+              variant: "secondary",
+              size: "md",
+              fullWidth: false,
+            })}
+          >
+            Preview as visitor
+          </Link>
+          <Link
+            to={paths.myProfile}
+            className={getButtonClasses({
+              variant: "secondary",
+              size: "md",
+              fullWidth: false,
+            })}
+          >
+            Back to profile
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6">
@@ -57,9 +71,13 @@ export default function EditProfilePage(): ReactElement {
             <SkillsEditor profile={profileQuery.data} />
             <ExperienceManager experiences={profileQuery.data.experiences} />
             <EducationManager education={profileQuery.data.education} />
-            <p className="text-sm text-muted">
-              Portfolio projects and company details come in the next step.
-            </p>
+            <ProjectsManager
+              projects={profileQuery.data.projects}
+              skills={profileQuery.data.skills}
+            />
+            {profileQuery.data.accountTypes.includes("client") ? (
+              <BusinessForm business={profileQuery.data.business} />
+            ) : null}
           </div>
         ) : null}
       </div>

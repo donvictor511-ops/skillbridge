@@ -19,7 +19,7 @@ import { profileKeys } from "../profileQueries";
 // Every save returns the FULL updated profile. We put it straight into the
 // cache, so this page and /profile/me both show it at once. There is only one
 // copy of the data, so it cannot get out of date.
-function useOwnerProfileMutation<TVariables>(
+export function useOwnerProfileMutation<TVariables>(
   mutationFn: (variables: TVariables) => Promise<OwnerProfile>,
 ) {
   const queryClient = useQueryClient();

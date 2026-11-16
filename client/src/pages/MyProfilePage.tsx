@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { Link } from "react-router";
-import { Pencil } from "lucide-react";
+import { Eye, Pencil } from "lucide-react";
 import { paths } from "../app/paths";
 import { ErrorMessage, getButtonClasses } from "../components/ui";
 import { useMyProfile } from "../features/profiles/profileQueries";
@@ -30,7 +30,18 @@ export default function MyProfilePage(): ReactElement {
 
       {profileQuery.data ? (
         <>
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <Link
+              to={paths.previewProfile}
+              className={getButtonClasses({
+                variant: "secondary",
+                size: "md",
+                fullWidth: false,
+              })}
+            >
+              <Eye className="h-4 w-4" aria-hidden="true" />
+              Preview as visitor
+            </Link>
             <Link
               to={paths.editProfile}
               className={getButtonClasses({
