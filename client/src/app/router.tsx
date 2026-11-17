@@ -19,6 +19,7 @@ import AccessDeniedPage from "../pages/AccessDeniedPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import RouteErrorPage from "../pages/RouteErrorPage";
 import DiscoverPage from "../pages/DiscoverPage";
+import ConnectionsPage from "../pages/ConnectionsPage";
 
 // Developer tools: only available while running `npm run dev`.
 const developmentOnlyRoutes: RouteObject[] = import.meta.env.DEV
@@ -29,21 +30,16 @@ const developmentOnlyRoutes: RouteObject[] = import.meta.env.DEV
 export const router = createBrowserRouter([
   {
     element: <PublicLayout />,
-    // Last resort: if the layout itself crashes.
     errorElement: <RouteErrorPage />,
     children: [
       {
-        // A pathless route that only adds a safety net around the pages.
-        // If a page crashes, the header and footer stay visible.
         errorElement: <RouteErrorPage />,
         children: [
           { path: paths.home, element: <LandingPage /> },
           ...developmentOnlyRoutes,
           { path: paths.accessDenied, element: <AccessDeniedPage /> },
-          // Anyone can open this URL. The API decides what they may see.
           { path: paths.profilePattern, element: <ProfilePage /> },
           {
-            // Only for logged-out visitors. Logged-in people are redirected.
             element: <GuestRoute />,
             children: [
               { path: paths.login, element: <LoginPage /> },
@@ -51,19 +47,15 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            // Everything inside here needs a logged-in user.
             element: <ProtectedRoute />,
             children: [
               { path: paths.onboarding, element: <OnboardingPage /> },
               {
-                // ...and a finished setup (otherwise: sent to /onboarding).
                 element: <OnboardedRoute />,
                 children: [
                   { path: paths.dashboard, element: <DashboardPage /> },
                   { path: paths.discover, element: <DiscoverPage /> },
-                  // "/profile/me", "/profile/edit", and "/profile/preview" are
-                  // more specific than "/profile/:userId", so the router picks
-                  // these for them.
+                  { path: paths.connections, element: <ConnectionsPage /> },
                   { path: paths.myProfile, element: <MyProfilePage /> },
                   { path: paths.editProfile, element: <EditProfilePage /> },
                   {
@@ -74,7 +66,6 @@ export const router = createBrowserRouter([
               },
             ],
           },
-          // The catch-all: any URL that matched nothing above.
           { path: "*", element: <NotFoundPage /> },
         ],
       },

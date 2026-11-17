@@ -1,11 +1,22 @@
-import { useState, type FormEvent, type ReactElement } from "react";
-import { Link } from "react-router";
-import { Users, Search, MapPin, ArrowUpRight } from "lucide-react";
+import { useEffect, useState, type FormEvent, type ReactElement } from "react";
+import { Link, useSearchParams } from "react-router";
+import {
+  Users,
+  Search,
+  MapPin,
+  ArrowUpRight,
+  UserPlus,
+  UserMinus,
+} from "lucide-react";
 
 import { Avatar, Badge, Button, Card, Input, Select } from "../components/ui";
-
 import { profilePath } from "../app/paths";
 import { useDiscoverProfiles } from "../features/discover/discoverQueries";
+import {
+  useConnections,
+  useRemoveConnection,
+  useSendConnectionRequest,
+} from "../features/connections/connectionsQueries";
 import type { DiscoverFilters } from "../types/discover";
 import type { Capability } from "../types/onboarding";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
@@ -13,31 +24,59 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 export default function DiscoverPage(): ReactElement {
   useDocumentTitle("Discover people | SkillBridge");
 
-  const [search, setSearch] = useState("");
-  const [skill, setSkill] = useState("");
-  const [location, setLocation] = useState("");
-  const [accountType, setAccountType] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [filters, setFilters] = useState<DiscoverFilters>({
-    page: 1,
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [skill, setSkill] = useState(searchParams.get("skill") ?? "");
+  const [location, setLocation] = useState(searchParams.get("location") ?? "");
+  const [accountType, setAccountType] = useState(
+    searchParams.get("accountType") ?? "",
+  );
+
+  useEffect(() => {
+    setSearch(searchParams.get("search") ?? "");
+    setSkill(searchParams.get("skill") ?? "");
+    setLocation(searchParams.get("location") ?? "");
+    setAccountType(searchParams.get("accountType") ?? "");
+  }, [searchParams]);
+
+  const filters: DiscoverFilters = {
+    search: searchParams.get("search") || undefined,
+    skill: searchParams.get("skill") || undefined,
+    location: searchParams.get("location") || undefined,
+    accountType:
+      (searchParams.get("accountType") as Capability | null) ?? undefined,
+    page: Math.max(1, Number(searchParams.get("page")) || 1),
     limit: 12,
-  });
+  };
 
   const discoverQuery = useDiscoverProfiles(filters);
+  const connectionsQuery = useConnections();
+  const sendRequest = useSendConnectionRequest();
+  const removeConnection = useRemoveConnection();
+
   const profiles = discoverQuery.data?.profiles ?? [];
   const pagination = discoverQuery.data?.pagination;
+  const connections = connectionsQuery.data ?? [];
+
+  const connectionByUserId = new Map(
+    connections.map((connection) => [connection.user.userId, connection]),
+  );
 
   function handleSearch(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
-    setFilters({
-      search: search.trim() || undefined,
-      skill: skill.trim() || undefined,
-      location: location.trim() || undefined,
-      accountType: accountType ? (accountType as Capability) : undefined,
-      page: 1,
-      limit: 12,
-    });
+    const nextParams = new URLSearchParams();
+
+    if (search.trim()) nextParams.set("search", search.trim());
+    if (skill.trim()) nextParams.set("skill", skill.trim());
+    if (location.trim()) nextParams.set("location", location.trim());
+    if (accountType) nextParams.set("accountType", accountType);
+
+    nextParams.set("page", "1");
+    nextParams.set("limit", "12");
+
+    setSearchParams(nextParams);
   }
 
   function clearFilters(): void {
@@ -46,17 +85,17 @@ export default function DiscoverPage(): ReactElement {
     setLocation("");
     setAccountType("");
 
-    setFilters({
-      page: 1,
-      limit: 12,
+    setSearchParams({
+      page: "1",
+      limit: "12",
     });
   }
 
   function changePage(page: number): void {
-    setFilters((current) => ({
-      ...current,
-      page,
-    }));
+    const nextParams = new URLSearchParams(searchParams);
+
+    nextParams.set("page", String(page));
+    setSearchParams(nextParams);
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -167,6 +206,32 @@ export default function DiscoverPage(): ReactElement {
             </div>
           )}
 
+          {connectionsQuery.isError && (
+            <div
+              className="mb-4 rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger-strong"
+              role="alert"
+            >
+              Unable to load connection statuses. Connect actions are
+              temporarily unavailable.
+              <Button
+                variant="secondary"
+                size="sm"
+                className="ml-3"
+                onClick={() => void connectionsQuery.refetch()}
+              >
+                Try again
+              </Button>
+            </div>
+          )}
+
+          {(sendRequest.isError || removeConnection.isError) && (
+            <p className="mb-4 text-sm text-danger-strong" role="alert">
+              {sendRequest.isError
+                ? "Unable to send the connection request. Please try again."
+                : "Unable to remove this connection. Please try again."}
+            </p>
+          )}
+
           {!discoverQuery.isPending &&
             !discoverQuery.isError &&
             profiles.length === 0 && (
@@ -194,76 +259,121 @@ export default function DiscoverPage(): ReactElement {
             )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {profiles.map((person) => (
-              <Card key={person.userId}>
-                <div className="flex items-start gap-3">
-                  <Avatar
-                    name={person.displayName}
-                    src={person.avatarUrl ?? undefined}
-                    size="lg"
-                  />
+            {profiles.map((person) => {
+              const connection = connectionByUserId.get(person.userId);
 
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-semibold text-navy">
-                      {person.displayName}
-                    </h3>
+              return (
+                <Card key={person.userId}>
+                  <div className="flex items-start gap-3">
+                    <Avatar
+                      name={person.displayName}
+                      src={person.avatarUrl ?? undefined}
+                      size="lg"
+                    />
 
-                    <p className="mt-1 line-clamp-2 text-sm text-muted">
-                      {person.headline || "SkillBridge member"}
-                    </p>
-                  </div>
-                </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-semibold text-navy">
+                        {person.displayName}
+                      </h3>
 
-                {person.location && (
-                  <p className="mt-4 flex items-center gap-2 text-sm text-muted">
-                    <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    {person.location}
-                  </p>
-                )}
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {person.accountTypes.map((type) => (
-                    <Badge key={type} tone="brand">
-                      {type === "professional"
-                        ? "Professional"
-                        : "Client or business"}
-                    </Badge>
-                  ))}
-                </div>
-
-                {person.skills.length > 0 && (
-                  <div className="mt-4 border-t border-line pt-3">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                      Skills
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      {person.skills.slice(0, 4).map((item) => (
-                        <Badge key={item.id} tone="neutral">
-                          {item.name}
-                        </Badge>
-                      ))}
-
-                      {person.skills.length > 4 && (
-                        <Badge tone="accent">
-                          +{person.skills.length - 4} more
-                        </Badge>
-                      )}
+                      <p className="mt-1 line-clamp-2 text-sm text-muted">
+                        {person.headline || "SkillBridge member"}
+                      </p>
                     </div>
                   </div>
-                )}
 
-                <div className="mt-5 border-t border-line pt-4">
-                  <Link
-                    to={profilePath(person.userId)}
-                    className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
-                  >
-                    View profile
-                    <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </div>
-              </Card>
-            ))}
+                  {person.location && (
+                    <p className="mt-4 flex items-center gap-2 text-sm text-muted">
+                      <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {person.location}
+                    </p>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {person.accountTypes.map((type) => (
+                      <Badge key={type} tone="brand">
+                        {type === "professional"
+                          ? "Professional"
+                          : "Client or business"}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {person.skills.length > 0 && (
+                    <div className="mt-4 border-t border-line pt-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                        Skills
+                      </p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {person.skills.slice(0, 4).map((item) => (
+                          <Badge key={item.id} tone="neutral">
+                            {item.name}
+                          </Badge>
+                        ))}
+
+                        {person.skills.length > 4 && (
+                          <Badge tone="accent">
+                            +{person.skills.length - 4} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+                    <Link
+                      to={profilePath(person.userId)}
+                      className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+                    >
+                      View profile
+                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+
+                    {connectionsQuery.isPending || connectionsQuery.isError ? (
+                      <Button size="sm" variant="secondary" disabled>
+                        Connect
+                      </Button>
+                    ) : connection?.status === "accepted" ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone="success">Connected</Badge>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={removeConnection.isPending}
+                          loading={removeConnection.isPending}
+                          onClick={() => removeConnection.mutate(connection.id)}
+                          aria-label={`Remove connection with ${person.displayName}`}
+                        >
+                          <UserMinus className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    ) : connection?.status === "pending" &&
+                      connection.direction === "outgoing" ? (
+                      <Button size="sm" variant="secondary" disabled>
+                        Request sent
+                      </Button>
+                    ) : connection?.status === "pending" &&
+                      connection.direction === "incoming" ? (
+                      <Badge tone="warning">Incoming request</Badge>
+                    ) : connection?.status === "rejected" ? (
+                      <Badge tone="neutral">Request declined</Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="gap-2"
+                        loading={sendRequest.isPending}
+                        disabled={sendRequest.isPending}
+                        onClick={() => sendRequest.mutate(person.userId)}
+                      >
+                        <UserPlus className="h-4 w-4" aria-hidden="true" />
+                        Connect
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
 
           {pagination && pagination.totalPages > 1 && (

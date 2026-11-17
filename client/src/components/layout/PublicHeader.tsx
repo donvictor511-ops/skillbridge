@@ -5,10 +5,57 @@ import { Menu, X } from "lucide-react";
 
 import { paths } from "../../app/paths";
 import { useCurrentUser } from "../../features/auth/authQueries";
+import { useConnections } from "../../features/connections/connectionsQueries";
 import { cn } from "../../lib/cn";
 import { getButtonClasses } from "../ui";
 import { primaryNavItems } from "../navigation/navItems";
 import { Logo } from "./Logo";
+
+function ConnectionsNavLink({
+  mobile = false,
+}: {
+  mobile?: boolean;
+}): ReactElement {
+  const { data: connections } = useConnections();
+
+  const pendingIncomingCount =
+    connections?.filter(
+      (connection) =>
+        connection.status === "pending" && connection.direction === "incoming",
+    ).length ?? 0;
+
+  return (
+    <NavLink
+      to={paths.connections}
+      className={({ isActive }) =>
+        cn(
+          mobile
+            ? "flex h-11 items-center justify-between rounded-control border-l-4 px-3 text-base transition-colors"
+            : "inline-flex h-16 items-center gap-2 border-b-2 px-3 text-sm transition-colors",
+          isActive
+            ? mobile
+              ? "border-brand bg-brand/10 font-semibold text-navy"
+              : "border-brand font-semibold text-navy"
+            : mobile
+              ? "border-transparent font-medium text-ink hover:bg-page"
+              : "border-transparent font-medium text-muted hover:text-navy",
+        )
+      }
+    >
+      <span>Connections</span>
+
+      {pendingIncomingCount > 0 && (
+        <span
+          role="status"
+          aria-label={`${pendingIncomingCount} pending connection requests`}
+          className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-white"
+        >
+          {pendingIncomingCount > 9 ? "9+" : pendingIncomingCount}
+        </span>
+      )}
+    </NavLink>
+  );
+}
 
 export function PublicHeader(): ReactElement {
   const location = useLocation();
@@ -79,6 +126,8 @@ export function PublicHeader(): ReactElement {
                 {item.label}
               </NavLink>
             ))}
+
+            {isOnboarded && <ConnectionsNavLink />}
           </nav>
         </div>
 
@@ -164,6 +213,8 @@ export function PublicHeader(): ReactElement {
               {item.label}
             </NavLink>
           ))}
+
+          {isOnboarded && <ConnectionsNavLink mobile />}
 
           <div className="mt-2 grid gap-2 border-t border-line pt-3">
             {!user ? (
