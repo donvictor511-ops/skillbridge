@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 # Smoke test for the profile API.
 #
@@ -118,6 +119,19 @@ check "the owner can still see it -> 200" 200
 section "6. Invalid input and unknown profiles"
 call PATCH /profiles/me '{"avatarUrl":"javascript:alert(1)"}' -b "$JAR_A"
 check "javascript: link -> 400" 400 '"code":"VALIDATION_ERROR"'
+
+# A null headline means the user wants to clear the existing headline.
+call PATCH /profiles/me '{"headline":null}' -b "$JAR_A"
+check "clearing headline with null -> 200" 200 '"headline":null'
+
+# displayName is required and should reject null.
+call PATCH /profiles/me '{"displayName":null}' -b "$JAR_A"
+check "displayName null -> 400" 400 '"code":"VALIDATION_ERROR"'
+
+# visibility must be a valid visibility value and should reject null.
+call PATCH /profiles/me '{"visibility":null}' -b "$JAR_A"
+check "visibility null -> 400" 400 '"code":"VALIDATION_ERROR"'
+
 call PATCH /profiles/me '{}' -b "$JAR_A"
 check "empty update -> 400" 400 '"code":"VALIDATION_ERROR"'
 call GET /profiles/not-a-uuid ""
