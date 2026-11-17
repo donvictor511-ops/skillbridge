@@ -18,6 +18,7 @@ import RegisterPage from "../pages/RegisterPage";
 import AccessDeniedPage from "../pages/AccessDeniedPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import RouteErrorPage from "../pages/RouteErrorPage";
+import DiscoverPage from "../pages/DiscoverPage";
 
 // Developer tools: only available while running `npm run dev`.
 const developmentOnlyRoutes: RouteObject[] = import.meta.env.DEV
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
                 element: <OnboardedRoute />,
                 children: [
                   { path: paths.dashboard, element: <DashboardPage /> },
+                  { path: paths.discover, element: <DiscoverPage /> },
                   // "/profile/me", "/profile/edit", and "/profile/preview" are
                   // more specific than "/profile/:userId", so the router picks
                   // these for them.

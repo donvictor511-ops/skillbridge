@@ -2,7 +2,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { Menu, X } from "lucide-react";
+
 import { paths } from "../../app/paths";
+import { useCurrentUser } from "../../features/auth/authQueries";
 import { cn } from "../../lib/cn";
 import { getButtonClasses } from "../ui";
 import { primaryNavItems } from "../navigation/navItems";
@@ -13,8 +15,14 @@ export function PublicHeader(): ReactElement {
   const menuId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-  // The menu counts as "open" only on the page where it was opened.
-  // When the page (pathname) changes, it closes by itself.
+  const { data: user } = useCurrentUser();
+
+  const isOnboarded = Boolean(user?.onboardedAt);
+
+  const visibleNavItems = isOnboarded
+    ? [...primaryNavItems, { label: "Discover", to: paths.discover }]
+    : primaryNavItems;
+
   const [openPath, setOpenPath] = useState<string | null>(null);
   const isMenuOpen = openPath === location.pathname;
 
@@ -22,7 +30,6 @@ export function PublicHeader(): ReactElement {
     setOpenPath(isMenuOpen ? null : location.pathname);
   }
 
-  // Escape closes the menu and puts focus back on the menu button.
   useEffect(() => {
     if (!isMenuOpen) {
       return;
@@ -36,6 +43,7 @@ export function PublicHeader(): ReactElement {
     }
 
     document.addEventListener("keydown", handleKeyDown);
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
@@ -54,7 +62,7 @@ export function PublicHeader(): ReactElement {
           </Link>
 
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
-            {primaryNavItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -75,26 +83,42 @@ export function PublicHeader(): ReactElement {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link
-            to={paths.login}
-            className={getButtonClasses({
-              variant: "ghost",
-              size: "md",
-              fullWidth: false,
-            })}
-          >
-            Log in
-          </Link>
-          <Link
-            to={paths.register}
-            className={getButtonClasses({
-              variant: "primary",
-              size: "md",
-              fullWidth: false,
-            })}
-          >
-            Get started
-          </Link>
+          {!user ? (
+            <>
+              <Link
+                to={paths.login}
+                className={getButtonClasses({
+                  variant: "ghost",
+                  size: "md",
+                  fullWidth: false,
+                })}
+              >
+                Log in
+              </Link>
+
+              <Link
+                to={paths.register}
+                className={getButtonClasses({
+                  variant: "primary",
+                  size: "md",
+                  fullWidth: false,
+                })}
+              >
+                Get started
+              </Link>
+            </>
+          ) : (
+            <Link
+              to={isOnboarded ? paths.dashboard : paths.onboarding}
+              className={getButtonClasses({
+                variant: "primary",
+                size: "md",
+                fullWidth: false,
+              })}
+            >
+              {isOnboarded ? "Dashboard" : "Complete profile"}
+            </Link>
+          )}
         </div>
 
         <button
@@ -123,7 +147,7 @@ export function PublicHeader(): ReactElement {
           aria-label="Mobile"
           className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 sm:px-6"
         >
-          {primaryNavItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -142,26 +166,42 @@ export function PublicHeader(): ReactElement {
           ))}
 
           <div className="mt-2 grid gap-2 border-t border-line pt-3">
-            <Link
-              to={paths.login}
-              className={getButtonClasses({
-                variant: "secondary",
-                size: "md",
-                fullWidth: true,
-              })}
-            >
-              Log in
-            </Link>
-            <Link
-              to={paths.register}
-              className={getButtonClasses({
-                variant: "primary",
-                size: "md",
-                fullWidth: true,
-              })}
-            >
-              Get started
-            </Link>
+            {!user ? (
+              <>
+                <Link
+                  to={paths.login}
+                  className={getButtonClasses({
+                    variant: "secondary",
+                    size: "md",
+                    fullWidth: true,
+                  })}
+                >
+                  Log in
+                </Link>
+
+                <Link
+                  to={paths.register}
+                  className={getButtonClasses({
+                    variant: "primary",
+                    size: "md",
+                    fullWidth: true,
+                  })}
+                >
+                  Get started
+                </Link>
+              </>
+            ) : (
+              <Link
+                to={isOnboarded ? paths.dashboard : paths.onboarding}
+                className={getButtonClasses({
+                  variant: "primary",
+                  size: "md",
+                  fullWidth: true,
+                })}
+              >
+                {isOnboarded ? "Dashboard" : "Complete profile"}
+              </Link>
+            )}
           </div>
         </nav>
       </div>
