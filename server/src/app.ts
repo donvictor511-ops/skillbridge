@@ -11,6 +11,7 @@ import { notFoundHandler } from "./middleware/notFound";
 import { errorHandler } from "./middleware/errorHandler";
 import { rejectNullCharacters } from "./middleware/rejectNullCharacters";
 import { discoverRouter } from "./modules/discover/discover.routes";
+import { connectionsRouter } from "./modules/connections/connections.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -44,6 +45,7 @@ export function createApp(): Express {
   app.use("/api/v1/onboarding", onboardingRouter);
   app.use("/api/v1/profiles", profileRouter);
   app.use("/api/v1/discover", discoverRouter);
+  app.use("/api/v1/connections", connectionsRouter);
 
   // These two MUST stay last, in this order.
   app.use(notFoundHandler);

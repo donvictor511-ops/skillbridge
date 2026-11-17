@@ -1,3 +1,4 @@
+
 generator client {
   provider            = "prisma-client"
   output              = "../src/generated/prisma"
@@ -34,18 +35,29 @@ enum BusinessSizeRange {
   @@map("business_size_range")
 }
 
+enum ConnectionStatus {
+  pending
+  accepted
+  rejected
+
+  @@map("connection_status")
+}
+
 model User {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email           String           @unique
-  passwordHash    String           @map("password_hash")
-  capabilities    AccountType[]    @default([])
-  onboardedAt     DateTime?        @map("onboarded_at")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  sessions        Session[]
-  profile         Profile?
-  skills          UserSkill[]
-  businessProfile BusinessProfile?
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                String           @unique
+  passwordHash         String           @map("password_hash")
+  capabilities         AccountType[]    @default([])
+  onboardedAt          DateTime?        @map("onboarded_at")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+  sessions             Session[]
+  profile              Profile?
+  skills               UserSkill[]
+  businessProfile      BusinessProfile?
+  connectionsLow       Connection[]     @relation("ConnectionLowUser")
+  connectionsHigh      Connection[]     @relation("ConnectionHighUser")
+  connectionRequests   Connection[]     @relation("ConnectionRequester")
 
   @@map("users")
 }
@@ -181,4 +193,24 @@ model BusinessProfile {
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("business_profiles")
+}
+
+model Connection {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userLowId     String           @map("user_low_id") @db.Uuid
+  userHighId    String           @map("user_high_id") @db.Uuid
+  requestedById String           @map("requested_by_id") @db.Uuid
+  status        ConnectionStatus @default(pending)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  userLow    User @relation("ConnectionLowUser", fields: [userLowId], references: [id], onDelete: Cascade)
+  userHigh   User @relation("ConnectionHighUser", fields: [userHighId], references: [id], onDelete: Cascade)
+  requestedBy User @relation("ConnectionRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@unique([userLowId, userHighId])
+  @@index([userLowId, status])
+  @@index([userHighId, status])
+  @@index([requestedById])
+  @@map("connections")
 }

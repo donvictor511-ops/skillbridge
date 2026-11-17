@@ -143,3 +143,82 @@ All require a session. Each returns the updated OwnerProfile.
   `501+`), `about` (optional, max 2000). Needs the `client` capability, otherwise
   403 `NOT_A_BUSINESS_ACCOUNT`.
 - `DELETE /profiles/me/business` removes the caller's own company details.
+
+## Connections
+
+All endpoints require an authenticated session and a completed onboarding.
+Responses use `Cache-Control: private, no-store`.
+
+### POST /connections/:userId
+
+Sends a connection request to another onboarded user.
+
+- The recipient must have a profile that is not private.
+- A user cannot send a request to themselves.
+- Only one connection record is allowed per pair of users.
+
+Responses:
+
+- 201: `{ "data": { "id", "status", "requestedById", "createdAt" } }`
+- 400 `SELF_CONNECTION`
+- 401 `UNAUTHENTICATED`
+- 403 `ONBOARDING_REQUIRED`
+- 404 `USER_NOT_AVAILABLE`
+- 409 `CONNECTION_EXISTS`: a pending, accepted, or previously rejected request exists
+
+### GET /connections
+
+Lists the caller's incoming and outgoing requests, accepted connections, and rejected requests.
+
+Optional query parameter:
+
+- `status`: `pending`, `accepted`, or `rejected`
+
+Each result includes:
+
+- `id`, `status`, `direction`, `createdAt`, `updatedAt`
+- `user`: the other participant's `userId`, `displayName`, `headline`,
+  `location`, and `avatarUrl`
+
+`direction` is `incoming` or `outgoing`, relative to the authenticated user.
+
+Never exposes email, password hashes, goals, or session data.
+
+Responses:
+
+- 200: `{ "data": [...] }`
+- 400 `VALIDATION_ERROR`
+- 401 `UNAUTHENTICATED`
+- 403 `ONBOARDING_REQUIRED`
+
+### PATCH /connections/:connectionId/accept
+
+Accepts an incoming pending connection request.
+
+- Only the recipient can accept the request.
+- A request that has already been handled cannot be accepted again.
+
+Responses:
+
+- 200: `{ "data": { "id", "status", "requestedById", "updatedAt" } }`
+- 401 `UNAUTHENTICATED`
+- 403 `NOT_REQUEST_RECIPIENT`
+- 403 `ONBOARDING_REQUIRED`
+- 404 `CONNECTION_NOT_FOUND`
+- 409 `REQUEST_NOT_PENDING` or `REQUEST_ALREADY_HANDLED`
+
+### PATCH /connections/:connectionId/reject
+
+Rejects an incoming pending connection request.
+
+Uses the same authorization and response rules as the accept endpoint,
+with `status` set to `rejected`.
+
+### DELETE /connections/:connectionId
+
+Removes a connection or cancels a request. Either participant can remove it.
+
+- 204: success, no response body
+- 401 `UNAUTHENTICATED`
+- 403 `ONBOARDING_REQUIRED`
+- 404 `CONNECTION_NOT_FOUND`
