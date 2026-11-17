@@ -23,3 +23,8 @@
 - Production deployment security review.
 
 These notes describe the current development stage, not a guarantee of production security.
+
+| Profile privacy | One pure function decides who may see a profile (public, members, private). A private profile answers exactly like a missing one. A visitor sees an allow-listed set of fields, never email, goals, or timestamps |
+| Ownership | Every edit uses the user id from the session and checks ownership inside the database command. Another person's entry gives the same 404 as a missing one |
+| Caching | Every profile response, errors included, is `Cache-Control: private, no-store` |
+| Hidden characters | A null character (code 0) in any text is refused with a 400 |

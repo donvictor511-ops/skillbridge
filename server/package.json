@@ -15,7 +15,9 @@
     "test:smoke": "bash scripts/smoke-auth.sh",
     "test:smoke:profiles": "bash scripts/smoke-profiles.sh",
     "test:smoke:profile-sections": "bash scripts/smoke-profile-sections.sh",
-    "test:smoke:profile-portfolio": "bash scripts/smoke-profile-portfolio.sh"
+    "test:smoke:profile-portfolio": "bash scripts/smoke-profile-portfolio.sh",
+    "test:privacy": "tsx scripts/profile-privacy-check.ts",
+    "test:all": "npm run test:smoke && npm run test:smoke:profiles && npm run test:smoke:profile-sections && npm run test:smoke:profile-portfolio && npm run test:privacy"
   },
   "keywords": [],
   "author": "",

@@ -9,6 +9,7 @@ import { onboardingRouter } from "./modules/onboarding/onboarding.routes";
 import { profileRouter } from "./modules/profiles/profile.routes";
 import { notFoundHandler } from "./middleware/notFound";
 import { errorHandler } from "./middleware/errorHandler";
+import { rejectNullCharacters } from "./middleware/rejectNullCharacters";
 
 export function createApp(): Express {
   const app = express();
@@ -18,10 +19,20 @@ export function createApp(): Express {
 
   // Only our own website may call this API from a browser, and it may send
   // cookies. Never use "*" together with cookies.
-  app.use(cors({ origin: env.clientOrigin, credentials: true }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        callback(null, origin === env.clientOrigin);
+      },
+      credentials: true,
+    }),
+  );
 
   // Read JSON request bodies. The small limit blocks oversized requests.
   app.use(express.json({ limit: "10kb" }));
+
+  // Refuse the invisible "code 0" character in any text we were sent.
+  app.use(rejectNullCharacters);
 
   // Read cookies into req.cookies.
   app.use(cookieParser());

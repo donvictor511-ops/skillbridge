@@ -25,6 +25,15 @@ import {
 
 export const profileRouter = Router();
 
+// Who may see a profile (and what we answer) depends on the cookie. So NOTHING
+// from these routes, neither a success nor an error, may be stored by a browser
+// or a shared cache. We set the header before any handler runs, so it is
+// present on every response, errors included.
+profileRouter.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  next();
+});
+
 // Mounted at /api/v1/profiles
 //
 // IMPORTANT: the "/me" routes MUST come before "/:userId". Otherwise Express
