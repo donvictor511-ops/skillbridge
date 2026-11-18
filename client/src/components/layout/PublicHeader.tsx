@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 import { paths } from "../../app/paths";
 import { useCurrentUser } from "../../features/auth/authQueries";
 import { useConnections } from "../../features/connections/connectionsQueries";
+import { NotificationBell } from "../../features/notifications/NotificationBell";
 import { cn } from "../../lib/cn";
 import { getButtonClasses } from "../ui";
 import { primaryNavItems } from "../navigation/navItems";
@@ -13,8 +14,10 @@ import { Logo } from "./Logo";
 
 function ConnectionsNavLink({
   mobile = false,
+  onNavigate,
 }: {
   mobile?: boolean;
+  onNavigate?: () => void;
 }): ReactElement {
   const { data: connections } = useConnections();
 
@@ -27,6 +30,7 @@ function ConnectionsNavLink({
   return (
     <NavLink
       to={paths.connections}
+      onClick={onNavigate}
       className={({ isActive }) =>
         cn(
           mobile
@@ -77,6 +81,10 @@ export function PublicHeader(): ReactElement {
     setOpenPath(isMenuOpen ? null : location.pathname);
   }
 
+  function closeMenu(): void {
+    setOpenPath(null);
+  }
+
   useEffect(() => {
     if (!isMenuOpen) {
       return;
@@ -99,15 +107,18 @@ export function PublicHeader(): ReactElement {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        {/* Logo */}
         <div className="flex items-center gap-6">
           <Link
             to={paths.home}
             aria-label="SkillBridge home"
             className="rounded-control"
+            onClick={closeMenu}
           >
             <Logo />
           </Link>
 
+          {/* Desktop navigation */}
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
             {visibleNavItems.map((item) => (
               <NavLink
@@ -131,7 +142,10 @@ export function PublicHeader(): ReactElement {
           </nav>
         </div>
 
+        {/* Desktop actions */}
         <div className="hidden items-center gap-2 md:flex">
+          {user && isOnboarded && <NotificationBell />}
+
           {!user ? (
             <>
               <Link
@@ -170,23 +184,29 @@ export function PublicHeader(): ReactElement {
           )}
         </div>
 
-        <button
-          ref={menuButtonRef}
-          type="button"
-          onClick={toggleMenu}
-          aria-expanded={isMenuOpen}
-          aria-controls={menuId}
-          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-control text-navy transition-colors hover:bg-page md:hidden"
-        >
-          {isMenuOpen ? (
-            <X className="h-6 w-6" aria-hidden="true" />
-          ) : (
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          )}
-        </button>
+        {/* Mobile actions */}
+        <div className="flex items-center gap-2 md:hidden">
+          {user && isOnboarded && <NotificationBell />}
+
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={toggleMenu}
+            aria-expanded={isMenuOpen}
+            aria-controls={menuId}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-control text-navy transition-colors hover:bg-page"
+          >
+            {isMenuOpen ? (
+              <X className="h-6 w-6" aria-hidden="true" />
+            ) : (
+              <Menu className="h-6 w-6" aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </div>
 
+      {/* Mobile navigation */}
       <div
         id={menuId}
         hidden={!isMenuOpen}
@@ -201,6 +221,7 @@ export function PublicHeader(): ReactElement {
               key={item.to}
               to={item.to}
               end={item.end}
+              onClick={closeMenu}
               className={({ isActive }) =>
                 cn(
                   "flex h-11 items-center rounded-control border-l-4 px-3 text-base transition-colors",
@@ -214,13 +235,16 @@ export function PublicHeader(): ReactElement {
             </NavLink>
           ))}
 
-          {isOnboarded && <ConnectionsNavLink mobile />}
+          {/* Mobile connections link */}
+          {isOnboarded && <ConnectionsNavLink mobile onNavigate={closeMenu} />}
 
+          {/* Mobile authentication actions */}
           <div className="mt-2 grid gap-2 border-t border-line pt-3">
             {!user ? (
               <>
                 <Link
                   to={paths.login}
+                  onClick={closeMenu}
                   className={getButtonClasses({
                     variant: "secondary",
                     size: "md",
@@ -232,6 +256,7 @@ export function PublicHeader(): ReactElement {
 
                 <Link
                   to={paths.register}
+                  onClick={closeMenu}
                   className={getButtonClasses({
                     variant: "primary",
                     size: "md",
@@ -244,6 +269,7 @@ export function PublicHeader(): ReactElement {
             ) : (
               <Link
                 to={isOnboarded ? paths.dashboard : paths.onboarding}
+                onClick={closeMenu}
                 className={getButtonClasses({
                   variant: "primary",
                   size: "md",
