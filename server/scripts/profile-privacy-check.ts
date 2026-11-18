@@ -161,6 +161,7 @@ function expectResponse(
 
 const PUBLIC_KEYS = [
   "userId",
+  "connectionCount",
   "displayName",
   "headline",
   "location",

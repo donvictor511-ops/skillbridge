@@ -12,16 +12,6 @@ function getUserPair(firstId: string, secondId: string) {
     : { userLowId: second, userHighId: first };
 }
 
-function ensureOnboarded(onboardedAt: Date | null) {
-  if (!onboardedAt) {
-    throw new AppError(
-      403,
-      "ONBOARDING_REQUIRED",
-      "Complete onboarding before managing connections.",
-    );
-  }
-}
-
 export async function sendConnectionRequest(
   requesterId: string,
   recipientId: string,
@@ -85,17 +75,31 @@ export async function sendConnectionRequest(
   }
 
   try {
-    const connection = await prisma.connection.create({
-      data: {
-        ...pair,
-        requestedById: requesterId,
-      },
-      select: {
-        id: true,
-        status: true,
-        requestedById: true,
-        createdAt: true,
-      },
+    const connection = await prisma.$transaction(async (tx) => {
+      const createdConnection = await tx.connection.create({
+        data: {
+          ...pair,
+          requestedById: requesterId,
+        },
+        select: {
+          id: true,
+          status: true,
+          requestedById: true,
+          createdAt: true,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          recipientId,
+          actorId: requesterId,
+          type: "connection_request",
+          message: "You received a connection request.",
+          resourceId: createdConnection.id,
+        },
+      });
+
+      return createdConnection;
     });
 
     return connection;
@@ -228,32 +232,49 @@ export async function respondToConnectionRequest(
     );
   }
 
-  const result = await prisma.connection.updateMany({
-    where: {
-      id: connectionId,
-      status: "pending",
-      requestedById: { not: userId },
-    },
-    data: { status },
+  const result = await prisma.$transaction(async (tx) => {
+    const updated = await tx.connection.updateMany({
+      where: {
+        id: connectionId,
+        status: "pending",
+        requestedById: { not: userId },
+      },
+      data: { status },
+    });
+
+    if (updated.count !== 1) {
+      throw new AppError(
+        409,
+        "REQUEST_ALREADY_HANDLED",
+        "This connection request has already been handled.",
+      );
+    }
+
+    // Notify the original requester only when their request is accepted.
+    if (status === "accepted") {
+      await tx.notification.create({
+        data: {
+          recipientId: connection.requestedById,
+          actorId: userId,
+          type: "connection_accepted",
+          message: "Your connection request was accepted.",
+          resourceId: connectionId,
+        },
+      });
+    }
+
+    return tx.connection.findUniqueOrThrow({
+      where: { id: connectionId },
+      select: {
+        id: true,
+        status: true,
+        requestedById: true,
+        updatedAt: true,
+      },
+    });
   });
 
-  if (result.count !== 1) {
-    throw new AppError(
-      409,
-      "REQUEST_ALREADY_HANDLED",
-      "This connection request has already been handled.",
-    );
-  }
-
-  return prisma.connection.findUniqueOrThrow({
-    where: { id: connectionId },
-    select: {
-      id: true,
-      status: true,
-      requestedById: true,
-      updatedAt: true,
-    },
-  });
+  return result;
 }
 
 export async function removeConnection(userId: string, connectionId: string) {

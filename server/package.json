@@ -18,7 +18,8 @@
     "test:smoke:profile-portfolio": "bash scripts/smoke-profile-portfolio.sh",
     "test:privacy": "tsx scripts/profile-privacy-check.ts",
     "test:smoke:connections": "bash scripts/smoke-connections.sh",
-    "test:all": "npm run test:smoke && npm run test:smoke:profiles && npm run test:smoke:profile-sections && npm run test:smoke:profile-portfolio && npm run test:privacy && npm run test:smoke:connections"
+    "test:smoke:notifications": "bash scripts/smoke-notifications.sh",
+    "test:all": "npm run test:smoke && npm run test:smoke:profiles && npm run test:smoke:profile-sections && npm run test:smoke:profile-portfolio && npm run test:privacy && npm run test:smoke:connections && npm run test:smoke:notifications"
   },
   "keywords": [],
   "author": "",

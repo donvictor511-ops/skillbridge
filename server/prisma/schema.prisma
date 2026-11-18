@@ -1,4 +1,3 @@
-
 generator client {
   provider            = "prisma-client"
   output              = "../src/generated/prisma"
@@ -43,21 +42,30 @@ enum ConnectionStatus {
   @@map("connection_status")
 }
 
+enum NotificationType {
+  connection_request
+  connection_accepted
+
+  @@map("notification_type")
+}
+
 model User {
-  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                String           @unique
-  passwordHash         String           @map("password_hash")
-  capabilities         AccountType[]    @default([])
-  onboardedAt          DateTime?        @map("onboarded_at")
-  createdAt            DateTime         @default(now()) @map("created_at")
-  updatedAt            DateTime         @updatedAt @map("updated_at")
-  sessions             Session[]
-  profile              Profile?
-  skills               UserSkill[]
-  businessProfile      BusinessProfile?
-  connectionsLow       Connection[]     @relation("ConnectionLowUser")
-  connectionsHigh      Connection[]     @relation("ConnectionHighUser")
-  connectionRequests   Connection[]     @relation("ConnectionRequester")
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String           @unique
+  passwordHash          String           @map("password_hash")
+  capabilities          AccountType[]    @default([])
+  onboardedAt           DateTime?        @map("onboarded_at")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+  sessions              Session[]
+  profile               Profile?
+  skills                UserSkill[]
+  businessProfile       BusinessProfile?
+  connectionsLow        Connection[]     @relation("ConnectionLowUser")
+  connectionsHigh       Connection[]     @relation("ConnectionHighUser")
+  connectionRequests    Connection[]     @relation("ConnectionRequester")
+  notificationsReceived Notification[]   @relation("NotificationRecipient")
+  notificationsSent     Notification[]   @relation("NotificationActor")
 
   @@map("users")
 }
@@ -204,8 +212,8 @@ model Connection {
   createdAt     DateTime         @default(now()) @map("created_at")
   updatedAt     DateTime         @updatedAt @map("updated_at")
 
-  userLow    User @relation("ConnectionLowUser", fields: [userLowId], references: [id], onDelete: Cascade)
-  userHigh   User @relation("ConnectionHighUser", fields: [userHighId], references: [id], onDelete: Cascade)
+  userLow     User @relation("ConnectionLowUser", fields: [userLowId], references: [id], onDelete: Cascade)
+  userHigh    User @relation("ConnectionHighUser", fields: [userHighId], references: [id], onDelete: Cascade)
   requestedBy User @relation("ConnectionRequester", fields: [requestedById], references: [id], onDelete: Cascade)
 
   @@unique([userLowId, userHighId])
@@ -213,4 +221,22 @@ model Connection {
   @@index([userHighId, status])
   @@index([requestedById])
   @@map("connections")
+}
+
+model Notification {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipientId String           @map("recipient_id") @db.Uuid
+  actorId     String           @map("actor_id") @db.Uuid
+  type        NotificationType
+  message     String           @db.VarChar(500)
+  resourceId  String?          @map("resource_id") @db.Uuid
+  isRead      Boolean          @default(false) @map("is_read")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  recipient User @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt])
+  @@index([recipientId, isRead])
+  @@map("notifications")
 }
