@@ -15,6 +15,15 @@ export function profileNotFound(): AppError {
   return new AppError(404, "PROFILE_NOT_FOUND", "Profile not found.");
 }
 
+async function getAcceptedConnectionCount(userId: string): Promise<number> {
+  return prisma.connection.count({
+    where: {
+      status: "accepted",
+      OR: [{ userLowId: userId }, { userHighId: userId }],
+    },
+  });
+}
+
 // P2025 is Prisma's code for "the record to update does not exist".
 function isRecordNotFoundError(error: unknown): boolean {
   return (
@@ -33,7 +42,9 @@ export async function getOwnerProfile(userId: string): Promise<OwnerProfile> {
     throw profileNotFound();
   }
 
-  return toOwnerProfile(row);
+  const connectionCount = await getAcceptedConnectionCount(userId);
+
+  return toOwnerProfile(row, connectionCount);
 }
 
 // Someone's profile as the CURRENT VISITOR is allowed to see it.
@@ -63,7 +74,9 @@ export async function getProfileForViewer(
   }
 
   // The public shape is used even when the owner views their own page here.
-  return toPublicProfile(row);
+  const connectionCount = await getAcceptedConnectionCount(targetUserId);
+
+  return toPublicProfile(row, connectionCount);
 }
 
 // Updates the basics of the CURRENT USER's profile. The user id comes from the

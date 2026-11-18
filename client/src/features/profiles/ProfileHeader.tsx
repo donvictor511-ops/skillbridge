@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 import { Avatar, Badge, Card } from "../../components/ui";
 import { isSafeHttpsUrl } from "../../lib/url";
 import type { PublicProfile } from "../../types/profile";
@@ -68,12 +68,25 @@ export function ProfileHeader({ profile }: ProfileHeaderProps): ReactElement {
           </p>
         ) : null}
 
-        {profile.location ? (
-          <p className="mt-2 flex items-center gap-1.5 text-sm text-muted">
-            <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="break-words">{profile.location}</span>
-          </p>
-        ) : null}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+          {profile.location ? (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="break-words">{profile.location}</span>
+            </span>
+          ) : null}
+
+          <span
+            className="flex items-center gap-1.5"
+            aria-label={`${profile.connectionCount} accepted connections`}
+          >
+            <Users className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              {profile.connectionCount}{" "}
+              {profile.connectionCount === 1 ? "connection" : "connections"}
+            </span>
+          </span>
+        </div>
 
         {profile.accountTypes.length > 0 ? (
           <ul className="mt-4 flex flex-wrap gap-2" aria-label="Account type">

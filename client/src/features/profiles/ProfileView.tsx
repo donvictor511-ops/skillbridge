@@ -7,6 +7,7 @@ import { BusinessSection } from "./BusinessSection";
 import { EducationSection } from "./EducationSection";
 import { ExperienceSection } from "./ExperienceSection";
 import { ProfileHeader } from "./ProfileHeader";
+import { ProfileConnectionActions } from "./ProfileConnectionActions";
 import { ProjectsSection } from "./ProjectsSection";
 import { SkillsSection } from "./SkillsSection";
 
@@ -68,15 +69,25 @@ export function ProfileView({
       ) : null}
 
       <ProfileHeader profile={profile} />
+
+      {!isOwner ? (
+        <ProfileConnectionActions profileUserId={profile.userId} />
+      ) : null}
+
       <AboutSection
         bio={profile.bio}
         interests={profile.interests}
         isOwner={isOwner}
       />
+
       <SkillsSection skills={profile.skills} isOwner={isOwner} />
+
       <ExperienceSection experiences={profile.experiences} isOwner={isOwner} />
+
       <EducationSection education={profile.education} isOwner={isOwner} />
+
       <ProjectsSection projects={profile.projects} isOwner={isOwner} />
+
       {profile.business ? (
         <BusinessSection business={profile.business} />
       ) : null}

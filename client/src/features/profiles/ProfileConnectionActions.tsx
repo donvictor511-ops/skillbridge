@@ -1,0 +1,250 @@
+import type { ReactElement } from "react";
+import { Check, Clock, UserPlus, UserMinus, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "../../components/ui";
+import { profileKeys } from "./profileQueries";
+import { useCurrentUser } from "../auth/authQueries";
+import {
+  useConnections,
+  useSendConnectionRequest,
+  useAcceptConnectionRequest,
+  useRejectConnectionRequest,
+  useRemoveConnection,
+} from "../connections/connectionsQueries";
+
+interface ProfileConnectionActionsProps {
+  profileUserId: string;
+}
+
+export function ProfileConnectionActions({
+  profileUserId,
+}: ProfileConnectionActionsProps): ReactElement | null {
+  const queryClient = useQueryClient();
+
+  const { data: currentUser, isPending: authLoading } = useCurrentUser();
+
+  const { data: connections = [], isPending: connectionsLoading } =
+    useConnections(undefined, Boolean(currentUser) && !authLoading, 5000);
+
+  const sendRequest = useSendConnectionRequest();
+  const acceptRequest = useAcceptConnectionRequest();
+  const rejectRequest = useRejectConnectionRequest();
+  const removeConnection = useRemoveConnection();
+
+  const connection = connections.find(
+    (item) => item.user.userId === profileUserId,
+  );
+
+  const isMutating =
+    sendRequest.isPending ||
+    acceptRequest.isPending ||
+    rejectRequest.isPending ||
+    removeConnection.isPending;
+
+  async function refreshProfileData() {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.detail(profileUserId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.me,
+      }),
+    ]);
+  }
+
+  function handleConnect() {
+    sendRequest.mutate(profileUserId, {
+      onSuccess: () => void refreshProfileData(),
+    });
+  }
+
+  function handleAccept() {
+    if (!connection) return;
+
+    acceptRequest.mutate(connection.id, {
+      onSuccess: () => void refreshProfileData(),
+    });
+  }
+
+  function handleReject() {
+    if (!connection) return;
+
+    rejectRequest.mutate(connection.id, {
+      onSuccess: () => void refreshProfileData(),
+    });
+  }
+
+  function handleRemove() {
+    if (!connection) return;
+
+    removeConnection.mutate(connection.id, {
+      onSuccess: () => void refreshProfileData(),
+    });
+  }
+
+  // Wait until authentication is resolved.
+  if (authLoading) {
+    return (
+      <div className="mt-4 text-sm text-muted" aria-live="polite">
+        Loading connection status...
+      </div>
+    );
+  }
+
+  // Guests can view public profiles but cannot manage connections.
+  if (!currentUser) {
+    return null;
+  }
+
+  // Wait for the authenticated user's connection list.
+  if (connectionsLoading) {
+    return (
+      <div className="mt-4 text-sm text-muted" aria-live="polite">
+        Loading connection status...
+      </div>
+    );
+  }
+
+  // No relationship yet.
+  if (!connection) {
+    return (
+      <div className="mt-5">
+        <Button
+          onClick={handleConnect}
+          loading={sendRequest.isPending}
+          disabled={isMutating}
+        >
+          <UserPlus className="h-4 w-4" aria-hidden="true" />
+          Connect
+        </Button>
+
+        {sendRequest.isError ? (
+          <p className="mt-2 text-sm text-danger" role="alert">
+            Could not send connection request. Please try again.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Already connected.
+  if (connection.status === "accepted") {
+    return (
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <span className="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-2 text-sm font-medium text-success">
+          <Check className="h-4 w-4" aria-hidden="true" />
+          Connected
+        </span>
+
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={handleRemove}
+          loading={removeConnection.isPending}
+          disabled={isMutating}
+        >
+          <UserMinus className="h-4 w-4" aria-hidden="true" />
+          Remove connection
+        </Button>
+
+        {removeConnection.isError ? (
+          <p className="w-full text-sm text-danger" role="alert">
+            Could not remove connection. Please try again.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Request sent by the current user.
+  if (connection.status === "pending" && connection.direction === "outgoing") {
+    return (
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <span className="inline-flex items-center gap-2 rounded-full bg-warning/10 px-3 py-2 text-sm font-medium text-muted">
+          <Clock className="h-4 w-4" aria-hidden="true" />
+          Request pending
+        </span>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleRemove}
+          loading={removeConnection.isPending}
+          disabled={isMutating}
+        >
+          Cancel request
+        </Button>
+
+        {removeConnection.isError ? (
+          <p className="w-full text-sm text-danger" role="alert">
+            Could not cancel request. Please try again.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Request received from the other person.
+  if (connection.status === "pending" && connection.direction === "incoming") {
+    return (
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <span className="inline-flex items-center gap-2 rounded-full bg-warning/10 px-3 py-2 text-sm font-medium text-muted">
+          <Clock className="h-4 w-4" aria-hidden="true" />
+          Received connection request
+        </span>
+
+        <Button
+          size="sm"
+          onClick={handleAccept}
+          loading={acceptRequest.isPending}
+          disabled={isMutating}
+        >
+          <Check className="h-4 w-4" aria-hidden="true" />
+          Accept
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleReject}
+          loading={rejectRequest.isPending}
+          disabled={isMutating}
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+          Reject
+        </Button>
+
+        {acceptRequest.isError || rejectRequest.isError ? (
+          <p className="w-full text-sm text-danger" role="alert">
+            Could not update request. Please try again.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Rejected request.
+  return (
+    <div className="mt-5 flex flex-wrap items-center gap-3">
+      <span className="inline-flex items-center gap-2 rounded-full bg-page px-3 py-2 text-sm font-medium text-muted">
+        Request rejected
+      </span>
+
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={handleRemove}
+        loading={removeConnection.isPending}
+        disabled={isMutating}
+      >
+        Remove previous request
+      </Button>
+
+      {removeConnection.isError ? (
+        <p className="w-full text-sm text-danger" role="alert">
+          Could not remove previous request. Please try again.
+        </p>
+      ) : null}
+    </div>
+  );
+}

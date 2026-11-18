@@ -15,7 +15,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 export default function ProfilePage(): ReactElement {
   const { userId = "" } = useParams();
   const { data: currentUser } = useCurrentUser();
-  const profileQuery = useProfile(userId);
+  const profileQuery = useProfile(userId, 5000);
 
   useDocumentTitle(
     profileQuery.data

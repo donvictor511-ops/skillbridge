@@ -17,12 +17,13 @@ export function useMyProfile() {
   });
 }
 
-export function useProfile(userId: string) {
+export function useProfile(userId: string, refetchInterval?: number | false) {
   return useQuery({
     queryKey: profileKeys.detail(userId),
     queryFn: () => getProfile(userId),
     enabled: userId !== "",
     retry: false,
     staleTime: 30_000,
+    refetchInterval,
   });
 }

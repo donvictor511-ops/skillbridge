@@ -54,6 +54,7 @@ export interface ProfileBusiness {
 // What OTHER people may see.
 export interface PublicProfile {
   userId: string;
+  connectionCount: number;
   displayName: string;
   headline: string | null;
   location: string | null;

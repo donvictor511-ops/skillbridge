@@ -16,12 +16,18 @@ export const connectionKeys = {
     [...connectionKeys.all, "list", status ?? "all"] as const,
 };
 
-export function useConnections(status?: ConnectionStatus) {
+export function useConnections(
+  status?: ConnectionStatus,
+  enabled = true,
+  refetchInterval?: number | false,
+) {
   return useQuery({
     queryKey: connectionKeys.list(status),
     queryFn: () => getConnections(status),
+    enabled,
     retry: false,
     staleTime: 15_000,
+    refetchInterval,
   });
 }
 

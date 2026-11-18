@@ -58,6 +58,7 @@ export interface ProfileBusiness {
 // Never included: email, goals, visibility setting, timestamps.
 export interface PublicProfile {
   userId: string;
+  connectionCount: number;
   displayName: string;
   headline: string | null;
   location: string | null;
