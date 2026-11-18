@@ -7,15 +7,20 @@ export interface Env {
   port: number;
   clientOrigin: string;
   databaseUrl: string;
+  cloudinaryCloudName: string;
+  cloudinaryApiKey: string;
+  cloudinaryApiSecret: string;
 }
 
 function readNodeEnv(value: string | undefined): NodeEnv {
   if (value === undefined || value === "") {
     return "development";
   }
+
   if (value === "development" || value === "test" || value === "production") {
     return value;
   }
+
   throw new Error(
     `Invalid NODE_ENV "${value}". Use development, test, or production.`,
   );
@@ -23,11 +28,13 @@ function readNodeEnv(value: string | undefined): NodeEnv {
 
 function readPort(value: string | undefined): number {
   const port = Number(value ?? "4000");
+
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error(
       `Invalid PORT "${String(value)}". Use a whole number from 1 to 65535.`,
     );
   }
+
   return port;
 }
 
@@ -35,6 +42,7 @@ function readRequired(name: string, value: string | undefined): string {
   if (value === undefined || value.trim() === "") {
     throw new Error(`Missing required environment variable: ${name}`);
   }
+
   return value.trim();
 }
 
@@ -44,4 +52,17 @@ export const env: Env = {
   port: readPort(process.env.PORT),
   clientOrigin: readRequired("CLIENT_ORIGIN", process.env.CLIENT_ORIGIN),
   databaseUrl: readRequired("DATABASE_URL", process.env.DATABASE_URL),
+
+  cloudinaryCloudName: readRequired(
+    "CLOUDINARY_CLOUD_NAME",
+    process.env.CLOUDINARY_CLOUD_NAME,
+  ),
+  cloudinaryApiKey: readRequired(
+    "CLOUDINARY_API_KEY",
+    process.env.CLOUDINARY_API_KEY,
+  ),
+  cloudinaryApiSecret: readRequired(
+    "CLOUDINARY_API_SECRET",
+    process.env.CLOUDINARY_API_SECRET,
+  ),
 };

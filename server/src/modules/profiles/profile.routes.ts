@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { optionalAuth } from "../../middleware/optionalAuth";
 import { requireAuth } from "../../middleware/requireAuth";
+import { uploadSingleImage } from "../../middleware/uploadImage";
 import {
   getMyProfile,
   getProfileById,
   updateMyProfile,
   updateMySkills,
 } from "./profile.controller";
+import { uploadMyProfileImage } from "./profile.upload.controller";
 import {
   createProjectHandler,
   deleteBusinessHandler,
@@ -41,6 +43,14 @@ profileRouter.use((_req, res, next) => {
 profileRouter.get("/me", requireAuth, getMyProfile);
 profileRouter.patch("/me", requireAuth, updateMyProfile);
 profileRouter.put("/me/skills", requireAuth, updateMySkills);
+
+// Profile image uploads
+profileRouter.post(
+  "/me/images/:imageType",
+  requireAuth,
+  uploadSingleImage,
+  uploadMyProfileImage,
+);
 
 // Experience (your own jobs)
 profileRouter.post("/me/experiences", requireAuth, createExperienceHandler);

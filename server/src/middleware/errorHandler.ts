@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import multer from "multer";
 import { ZodError } from "zod";
 import { env } from "../config/env";
 import { AppError } from "../utils/appError";
@@ -12,7 +13,6 @@ interface ErrorResponseBody {
   };
 }
 
-// Express's JSON body reader marks its errors with a "type" text.
 function getBodyParserErrorType(error: unknown): string | null {
   if (
     typeof error === "object" &&
@@ -22,20 +22,20 @@ function getBodyParserErrorType(error: unknown): string | null {
   ) {
     return error.type;
   }
+
   return null;
 }
 
-// Never write passwords, tokens, or personal data to logs.
-// In development we print the full error to help you debug.
-// Elsewhere we print only the error's name.
 function logUnexpectedError(error: unknown): void {
   if (env.nodeEnv === "test") {
     return;
   }
+
   if (env.nodeEnv === "development") {
     console.error(error);
     return;
   }
+
   const name = error instanceof Error ? error.name : "UnknownError";
   console.error(`Unexpected error: ${name}`);
 }
@@ -48,20 +48,18 @@ function sendError(
   res.status(statusCode).json(body);
 }
 
-// Express recognizes an error handler by its FOUR parameters.
 export function errorHandler(
   err: unknown,
   _req: Request,
   res: Response,
   next: NextFunction,
 ): void {
-  // If a response was already started, let Express finish it.
   if (res.headersSent) {
     next(err);
     return;
   }
 
-  // 1. Input did not pass Zod validation -> 400
+  // 1. Zod validation errors
   if (err instanceof ZodError) {
     const details: ErrorDetail[] = err.issues.map((issue) => ({
       field: issue.path.length > 0 ? issue.path.map(String).join(".") : "body",
@@ -78,7 +76,7 @@ export function errorHandler(
     return;
   }
 
-  // 2. An error we raised on purpose (duplicate email, and so on)
+  // 2. Errors raised intentionally by our application
   if (err instanceof AppError) {
     sendError(res, err.statusCode, {
       error: {
@@ -90,8 +88,24 @@ export function errorHandler(
     return;
   }
 
-  // 3. The request body could not be read
+  // 3. Multer upload errors
+  if (err instanceof multer.MulterError) {
+    const isTooLarge = err.code === "LIMIT_FILE_SIZE";
+
+    sendError(res, isTooLarge ? 413 : 400, {
+      error: {
+        code: isTooLarge ? "IMAGE_TOO_LARGE" : "IMAGE_UPLOAD_ERROR",
+        message: isTooLarge
+          ? "The image must not exceed 5 MB."
+          : "The image could not be accepted. Please check your upload and try again.",
+      },
+    });
+    return;
+  }
+
+  // 4. JSON body parser errors
   const bodyErrorType = getBodyParserErrorType(err);
+
   if (bodyErrorType === "entity.parse.failed") {
     sendError(res, 400, {
       error: {
@@ -101,6 +115,7 @@ export function errorHandler(
     });
     return;
   }
+
   if (bodyErrorType === "entity.too.large") {
     sendError(res, 413, {
       error: {
@@ -111,8 +126,9 @@ export function errorHandler(
     return;
   }
 
-  // 4. Anything else is our bug. Log it safely, reply with a safe message.
+  // 5. Unexpected errors
   logUnexpectedError(err);
+
   sendError(res, 500, {
     error: {
       code: "INTERNAL_ERROR",
