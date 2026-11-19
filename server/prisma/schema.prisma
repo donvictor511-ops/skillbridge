@@ -66,6 +66,9 @@ model User {
   connectionRequests    Connection[]     @relation("ConnectionRequester")
   notificationsReceived Notification[]   @relation("NotificationRecipient")
   notificationsSent     Notification[]   @relation("NotificationActor")
+  posts                 Post[]
+  postLikes             PostLike[]
+  postComments          PostComment[]
 
   @@map("users")
 }
@@ -239,4 +242,50 @@ model Notification {
   @@index([recipientId, createdAt])
   @@index([recipientId, isRead])
   @@map("notifications")
+}
+
+model Post {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
+  content   String   @db.VarChar(3000)
+  imageUrl  String?  @map("image_url") @db.VarChar(2048)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes    PostLike[]
+  comments PostComment[]
+
+  @@index([createdAt])
+  @@index([authorId, createdAt])
+  @@map("posts")
+}
+
+model PostLike {
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+model PostComment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([authorId])
+  @@map("post_comments")
 }

@@ -13,6 +13,7 @@ import { rejectNullCharacters } from "./middleware/rejectNullCharacters";
 import { discoverRouter } from "./modules/discover/discover.routes";
 import { connectionsRouter } from "./modules/connections/connections.routes";
 import { notificationsRouter } from "./modules/notifications/notifications.routes";
+import { postsRouter } from "./modules/posts/posts.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -48,6 +49,7 @@ export function createApp(): Express {
   app.use("/api/v1/discover", discoverRouter);
   app.use("/api/v1/connections", connectionsRouter);
   app.use("/api/v1/notifications", notificationsRouter);
+  app.use("/api/v1/posts", postsRouter);
 
   // These two MUST stay last, in this order.
   app.use(notFoundHandler);
