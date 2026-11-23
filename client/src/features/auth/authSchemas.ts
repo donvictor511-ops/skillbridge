@@ -6,7 +6,7 @@ export { toFieldErrors } from "../../lib/zodErrors";
 // IMPORTANT: these checks only give the user FAST feedback.
 // The server repeats every check and is the real authority. The numbers here
 // must match the server (server/src/modules/auth/auth.schema.ts).
-export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
 const emailField = z
