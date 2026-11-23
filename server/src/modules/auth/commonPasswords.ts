@@ -1,8 +1,20 @@
-// A small starter list of very common passwords that are at least 12
-// characters long (shorter ones are already rejected by the length rule).
+// A small starter list of very common passwords that meet the 8-character
+// minimum but are still too easy to guess.
 // Real products also check passwords against large breached-password lists.
 // We may upgrade this later.
 const COMMON_PASSWORDS: ReadonlySet<string> = new Set([
+  "password",
+  "password1",
+  "password12",
+  "12345678",
+  "123456789",
+  "qwerty123",
+  "abc12345",
+  "letmein1",
+  "welcome1",
+  "iloveyou",
+  "admin123",
+  "passw0rd",
   "password1234",
   "password12345",
   "password123456",
