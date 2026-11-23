@@ -13,7 +13,12 @@ export interface DiscoverProfile {
   avatarUrl: string | null;
   accountTypes: Capability[];
   skills: DiscoverSkill[];
+  mutualConnectionCount?: number;
+  sharedSkills?: string[];
+  reasons?: string[];
 }
+
+export interface DiscoverRecommendationsResponse { recommendations: DiscoverProfile[]; }
 
 export interface DiscoverPagination {
   page: number;
@@ -32,6 +37,7 @@ export interface DiscoverFilters {
   skill?: string;
   location?: string;
   accountType?: Capability;
+  networkStatus?: "not_connected" | "connected" | "pending";
   page?: number;
   limit?: number;
 }

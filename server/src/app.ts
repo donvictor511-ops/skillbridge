@@ -14,6 +14,14 @@ import { discoverRouter } from "./modules/discover/discover.routes";
 import { connectionsRouter } from "./modules/connections/connections.routes";
 import { notificationsRouter } from "./modules/notifications/notifications.routes";
 import { postsRouter } from "./modules/posts/posts.routes";
+import { messagesRouter } from "./modules/messages/messages.routes";
+import { communitiesRouter } from "./modules/communities/communities.routes";
+import { marketplaceRouter } from "./modules/marketplace/marketplace.routes";
+import { aiRouter } from "./modules/ai/ai.routes";
+import { adminRouter } from "./modules/admin/admin.routes";
+import { moderationRouter } from "./modules/moderation/moderation.routes";
+import { callsRouter } from "./modules/calls/calls.routes";
+import { searchRouter } from "./modules/search/search.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -50,6 +58,14 @@ export function createApp(): Express {
   app.use("/api/v1/connections", connectionsRouter);
   app.use("/api/v1/notifications", notificationsRouter);
   app.use("/api/v1/posts", postsRouter);
+  app.use("/api/v1/messages", messagesRouter);
+  app.use("/api/v1/communities", communitiesRouter);
+  app.use("/api/v1/marketplace", marketplaceRouter);
+  app.use("/api/v1/ai", aiRouter);
+  app.use("/api/v1/admin", adminRouter);
+  app.use("/api/v1/moderation", moderationRouter);
+  app.use("/api/v1/search", searchRouter);
+  app.use("/api/v1/calls", callsRouter);
 
   // These two MUST stay last, in this order.
   app.use(notFoundHandler);

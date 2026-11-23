@@ -9,6 +9,15 @@
       content="SkillBridge connects professionals, clients, and businesses. Prove your skills with real work."
     />
     <meta name="theme-color" content="#14213d" />
+    <script>
+      try {
+        const savedTheme = localStorage.getItem("skillbridge-theme");
+        if (savedTheme === "dark") {
+          document.documentElement.dataset.theme = "dark";
+          document.documentElement.style.colorScheme = "dark";
+        }
+      } catch { /* Continue with the default light theme. */ }
+    </script>
     <title>skillBridge</title>
   </head>
   <body>

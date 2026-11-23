@@ -197,6 +197,10 @@ if [ -n "$POST_A_ID" ]; then
   call POST "/posts/${POST_A_ID}/likes" "" -b "$JAR_B"
   check "B can like A's post -> 204" 204
 
+  call GET /notifications "" -b "$JAR_A"
+  check "A receives a post-like notification" 200 '"type":"post_like"'
+  check "Like notification links to the post" 200 "\"resourceId\":\"${POST_A_ID}\""
+
   call POST "/posts/${POST_A_ID}/likes" "" -b "$JAR_B"
   check "Liking twice does not create a duplicate -> 204" 204
 
@@ -233,6 +237,10 @@ if [ -n "$POST_A_ID" ]; then
   else
     ok "B's comment ID is available"
   fi
+
+  call GET /notifications "" -b "$JAR_A"
+  check "A receives a post-comment notification" 200 '"type":"post_comment"'
+  check "Comment notification links to the post" 200 "\"resourceId\":\"${POST_A_ID}\""
 
   call GET "/posts/${POST_A_ID}/comments" "" -b "$JAR_B"
   check "Authenticated user can read comments -> 200" 200 "Comment written by B"

@@ -1,8 +1,9 @@
-import type { ReactElement, ReactNode } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import { Link } from "react-router";
-import { Check, Clock3, MapPin, Send, UserMinus, Users, X } from "lucide-react";
+import { Check, Clock3, MapPin, MessageSquare, Search, Send, UserMinus, Users, X } from "lucide-react";
 
 import { profilePath } from "../app/paths";
+import { paths } from "../app/paths";
 import {
   Avatar,
   Badge,
@@ -10,6 +11,7 @@ import {
   Card,
   EmptyState,
   ErrorMessage,
+  Input,
   Spinner,
 } from "../components/ui";
 
@@ -37,7 +39,9 @@ function ConnectionCard({
   return (
     <Card className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar name={user.displayName} src={user.avatarUrl} size="lg" />
+        <Link to={profilePath(user.userId)} aria-label={`View ${user.displayName}'s profile`} className="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+          <Avatar name={user.displayName} src={user.avatarUrl} size="lg" />
+        </Link>
 
         <div className="min-w-0">
           <Link
@@ -99,6 +103,7 @@ function ConnectionSection({
 
 export default function ConnectionsPage(): ReactElement {
   useDocumentTitle("My connections | SkillBridge");
+  const [search, setSearch] = useState("");
 
   const connectionsQuery = useConnections();
 
@@ -108,18 +113,23 @@ export default function ConnectionsPage(): ReactElement {
 
   const connections = connectionsQuery.data ?? [];
 
+  const matchesSearch = (connection: Connection) => {
+    const term = search.trim().toLocaleLowerCase();
+    return !term || [connection.user.displayName, connection.user.headline ?? "", connection.user.location ?? ""].some((value) => value.toLocaleLowerCase().includes(term));
+  };
+
   const incomingRequests = connections.filter(
     (connection) =>
-      connection.status === "pending" && connection.direction === "incoming",
+      connection.status === "pending" && connection.direction === "incoming" && matchesSearch(connection),
   );
 
   const outgoingRequests = connections.filter(
     (connection) =>
-      connection.status === "pending" && connection.direction === "outgoing",
+      connection.status === "pending" && connection.direction === "outgoing" && matchesSearch(connection),
   );
 
   const acceptedConnections = connections.filter(
-    (connection) => connection.status === "accepted",
+    (connection) => connection.status === "accepted" && matchesSearch(connection),
   );
 
   const hasMutationError =
@@ -143,6 +153,10 @@ export default function ConnectionsPage(): ReactElement {
             professionals in your network.
           </p>
         </header>
+
+        <div className="max-w-xl">
+          <Input label="Search your network" placeholder="Name, role, or location" value={search} onChange={(event) => setSearch(event.target.value)} endAdornment={<Search className="mr-2 h-4 w-4 text-muted" aria-hidden="true" />} />
+        </div>
 
         {hasMutationError && (
           <ErrorMessage message="We couldn't complete that action. Please try again." />
@@ -277,6 +291,8 @@ export default function ConnectionsPage(): ReactElement {
               ) : (
                 acceptedConnections.map((connection) => (
                   <ConnectionCard key={connection.id} connection={connection}>
+                    {connection.user.mutualConnectionCount ? <Badge tone="neutral">{connection.user.mutualConnectionCount} mutual {connection.user.mutualConnectionCount === 1 ? "connection" : "connections"}</Badge> : null}
+                    <Link to={`${paths.messages}?userId=${encodeURIComponent(connection.user.userId)}`}><Button size="sm"><MessageSquare className="mr-1.5 h-4 w-4" />Message</Button></Link>
                     <Badge tone="success">
                       <Check className="h-3.5 w-3.5" />
                       Connected

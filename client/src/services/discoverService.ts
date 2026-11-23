@@ -1,5 +1,5 @@
 import type { ApiSuccessResponse } from "../types/api";
-import type { DiscoverFilters, DiscoverResponse } from "../types/discover";
+import type { DiscoverFilters, DiscoverRecommendationsResponse, DiscoverResponse } from "../types/discover";
 import { apiClient } from "./apiClient";
 
 export async function discoverProfiles(
@@ -12,5 +12,10 @@ export async function discoverProfiles(
     },
   );
 
+  return response.data.data;
+}
+
+export async function getRecommendedProfiles(): Promise<DiscoverRecommendationsResponse> {
+  const response = await apiClient.get<ApiSuccessResponse<DiscoverRecommendationsResponse>>("/discover/recommendations");
   return response.data.data;
 }

@@ -31,6 +31,10 @@ export async function login(credentials: Credentials): Promise<AuthUser> {
   return response.data.data.user;
 }
 
+export async function submitAccountAppeal(input: Credentials & { message: string }): Promise<void> {
+  await apiClient.post("/auth/account-appeals", input);
+}
+
 // Creates the account. The server also starts a session (sets the cookie).
 export async function register(credentials: Credentials): Promise<AuthUser> {
   const response = await apiClient.post<ApiSuccessResponse<UserResponseData>>(

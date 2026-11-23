@@ -25,6 +25,7 @@ import {
 } from "../components/ui";
 
 import { useCurrentUser, useLogout } from "../features/auth/authQueries";
+import { AccountAppealForm } from "../features/auth/AccountAppealForm";
 import { capabilityOptions } from "../features/onboarding/onboardingOptions";
 import { useMyProfile } from "../features/profiles/profileQueries";
 import { useConnections } from "../features/connections/connectionsQueries";
@@ -170,14 +171,21 @@ export default function DashboardPage(): ReactElement {
           />
         )}
 
+        {user?.restrictedUntil && new Date(user.restrictedUntil) > new Date() ? (
+          <Card role="status" className="mb-6 border-warning/30">
+            <h2 className="font-semibold text-navy">Your account is temporarily restricted</h2>
+            <p className="mt-1 text-sm text-muted">You can use the account until {new Date(user.restrictedUntil).toLocaleString()}, but some actions are disabled.</p>
+            {user.restrictionReason ? <p className="mt-2 text-sm text-ink"><span className="font-semibold">Reason:</span> {user.restrictionReason}</p> : null}
+            <AccountAppealForm defaultEmail={user.email} />
+          </Card>
+        ) : null}
+
         {profile && (
           <Card>
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <Avatar
-                name={profile.displayName}
-                src={profile.avatarUrl ?? undefined}
-                size="xl"
-              />
+              <Link to={paths.myProfile} aria-label="View your profile" className="shrink-0 rounded-full">
+                <Avatar name={profile.displayName} src={profile.avatarUrl ?? undefined} size="xl" />
+              </Link>
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -480,11 +488,9 @@ export default function DashboardPage(): ReactElement {
               <div className="mt-5 space-y-4">
                 {latestConnections.map((connection) => (
                   <div key={connection.id} className="flex items-center gap-3">
-                    <Avatar
-                      name={connection.user.displayName}
-                      src={connection.user.avatarUrl ?? undefined}
-                      size="md"
-                    />
+                    <Link to={paths.profilePattern.replace(":userId", connection.user.userId)} aria-label={`View ${connection.user.displayName}'s profile`} className="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                      <Avatar name={connection.user.displayName} src={connection.user.avatarUrl ?? undefined} size="md" />
+                    </Link>
 
                     <div className="min-w-0 flex-1">
                       <Link
@@ -550,11 +556,9 @@ export default function DashboardPage(): ReactElement {
               <div className="mt-5 space-y-4">
                 {latestIncomingRequests.map((connection) => (
                   <div key={connection.id} className="flex items-center gap-3">
-                    <Avatar
-                      name={connection.user.displayName}
-                      src={connection.user.avatarUrl ?? undefined}
-                      size="md"
-                    />
+                    <Link to={paths.profilePattern.replace(":userId", connection.user.userId)} aria-label={`View ${connection.user.displayName}'s profile`} className="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                      <Avatar name={connection.user.displayName} src={connection.user.avatarUrl ?? undefined} size="md" />
+                    </Link>
 
                     <div className="min-w-0 flex-1">
                       <Link

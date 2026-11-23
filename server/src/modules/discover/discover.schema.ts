@@ -9,6 +9,7 @@ export const discoverQuerySchema = z.object({
   location: z.string().trim().min(1).max(80).optional(),
 
   accountType: z.enum(CAPABILITIES).optional(),
+  networkStatus: z.enum(["not_connected", "connected", "pending"]).optional(),
 
   page: z.coerce.number().int().min(1).default(1),
 

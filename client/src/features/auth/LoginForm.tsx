@@ -4,6 +4,7 @@ import { Button, ErrorMessage, Input } from "../../components/ui";
 import { getApiErrorInfo } from "../../lib/apiError";
 import { focusFirstInvalidField } from "../../lib/forms";
 import { useLogin } from "./authQueries";
+import { AccountAppealForm } from "./AccountAppealForm";
 import { loginFormSchema, toFieldErrors } from "./authSchemas";
 import { PasswordField } from "./PasswordField";
 
@@ -18,6 +19,7 @@ export function LoginForm(): ReactElement {
   const [password, setPassword] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [suspendedLogin, setSuspendedLogin] = useState<{ email: string; password: string } | null>(null);
 
   // When the user edits a field, its old error no longer applies.
   function clearFieldError(field: string): void {
@@ -31,6 +33,7 @@ export function LoginForm(): ReactElement {
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     setFormError(null);
+    setSuspendedLogin(null);
 
     // 1. Quick checks in the browser (feedback only).
     const result = loginFormSchema.safeParse({ email, password });
@@ -49,6 +52,7 @@ export function LoginForm(): ReactElement {
     loginMutation.mutate(result.data, {
       onError: (error: unknown) => {
         const info = getApiErrorInfo(error);
+        if (info.code === "ACCOUNT_SUSPENDED") setSuspendedLogin(result.data);
         const hasFieldErrors = Object.keys(info.fieldErrors).length > 0;
 
         setFieldErrors(info.fieldErrors);
@@ -59,6 +63,7 @@ export function LoginForm(): ReactElement {
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
       {formError ? (
         <ErrorMessage title="Could not log in" message={formError} />
@@ -78,6 +83,7 @@ export function LoginForm(): ReactElement {
         onChange={(event) => {
           setEmail(event.target.value);
           clearFieldError("email");
+          setSuspendedLogin(null);
         }}
         error={fieldErrors.email}
       />
@@ -92,6 +98,7 @@ export function LoginForm(): ReactElement {
         onChange={(event) => {
           setPassword(event.target.value);
           clearFieldError("password");
+          setSuspendedLogin(null);
         }}
         error={fieldErrors.password}
       />
@@ -100,5 +107,7 @@ export function LoginForm(): ReactElement {
         {loginMutation.isPending ? "Logging in..." : "Log in"}
       </Button>
     </form>
+    {suspendedLogin ? <AccountAppealForm key={suspendedLogin.email} credentials={suspendedLogin} /> : null}
+    </>
   );
 }

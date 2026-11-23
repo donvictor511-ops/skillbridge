@@ -36,10 +36,30 @@
 }
 
 @layer base {
+  :root[data-theme="dark"] {
+    --color-page: #0b1220;
+    --color-surface: #111c2f;
+    --color-ink: #e7edf7;
+    --color-muted: #a5b1c4;
+    --color-line: #29374d;
+    --color-accent: #5eead4;
+    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.25), 0 8px 24px -18px rgb(0 0 0 / 0.55);
+  }
+
   body {
     background-color: var(--color-page);
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   /* One clear keyboard focus style for the whole app. */
@@ -53,4 +73,57 @@
   [data-surface="dark"] :focus-visible {
     outline-color: var(--color-surface);
   }
+}
+
+/* These overrides sit outside Tailwind's layers so they consistently win over
+   generated color utilities across all feature pages. */
+:root[data-theme="dark"] .text-navy { color: #e7edf7; }
+:root[data-theme="dark"] .bg-accent\/15 { background-color: rgb(94 234 212 / 0.14); }
+:root[data-theme="dark"] .bg-white,
+:root[data-theme="dark"] .bg-slate-50,
+:root[data-theme="dark"] .bg-slate-100,
+:root[data-theme="dark"] .bg-gray-50 { background-color: var(--color-page); }
+:root[data-theme="dark"] .bg-blue-50 { background-color: rgb(37 99 235 / 0.16); }
+:root[data-theme="dark"] .bg-emerald-50 { background-color: rgb(22 163 74 / 0.14); }
+:root[data-theme="dark"] .border-slate-200,
+:root[data-theme="dark"] .border-slate-100,
+:root[data-theme="dark"] .border-gray-300 { border-color: var(--color-line); }
+:root[data-theme="dark"] .text-slate-900,
+:root[data-theme="dark"] .text-gray-900,
+:root[data-theme="dark"] .text-gray-700 { color: var(--color-ink); }
+:root[data-theme="dark"] .text-slate-600,
+:root[data-theme="dark"] .text-slate-500,
+:root[data-theme="dark"] .text-slate-800,
+:root[data-theme="dark"] .text-slate-700,
+:root[data-theme="dark"] .text-gray-600,
+:root[data-theme="dark"] .text-gray-500 { color: var(--color-muted); }
+:root[data-theme="dark"] .text-brand,
+:root[data-theme="dark"] .text-blue-700,
+:root[data-theme="dark"] .text-blue-600 { color: #93c5fd; }
+:root[data-theme="dark"] .text-amber-600 { color: #fcd34d; }
+:root[data-theme="dark"] .text-success,
+:root[data-theme="dark"] .text-success-strong,
+:root[data-theme="dark"] .text-emerald-700,
+:root[data-theme="dark"] .text-green-700 { color: #86efac; }
+:root[data-theme="dark"] .text-warning,
+:root[data-theme="dark"] .text-warning-strong { color: #fcd34d; }
+:root[data-theme="dark"] .text-danger,
+:root[data-theme="dark"] .text-danger-strong,
+:root[data-theme="dark"] .text-red-700,
+:root[data-theme="dark"] .text-red-600 { color: #fca5a5; }
+:root[data-theme="dark"] .border-blue-600 { border-color: #93c5fd; }
+:root[data-theme="dark"] .hover\:bg-gray-50:hover { background-color: var(--color-page); }
+:root[data-theme="dark"] .hover\:text-navy:hover { color: #cbdcff; }
+
+.navigation-progress-fill {
+  width: 0;
+  animation: navigation-progress-complete 700ms ease-out forwards;
+}
+
+@keyframes navigation-progress-complete {
+  to { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-progress-fill { animation-duration: 1ms; }
 }

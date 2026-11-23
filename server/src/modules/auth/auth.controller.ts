@@ -5,8 +5,8 @@ import {
   readSessionToken,
   setSessionCookie,
 } from "./auth.cookies";
-import { loginSchema, registerSchema } from "./auth.schema";
-import { loginUser, registerUser } from "./auth.service";
+import { accountAppealSchema, loginSchema, registerSchema } from "./auth.schema";
+import { loginUser, registerUser, submitAccountAppeal } from "./auth.service";
 import { createSession, deleteSessionByToken } from "./session.service";
 
 export async function register(req: Request, res: Response): Promise<void> {
@@ -30,6 +30,11 @@ export async function login(req: Request, res: Response): Promise<void> {
 
   setSessionCookie(res, session.token, session.expiresAt);
   res.status(200).json({ data: { user } });
+}
+
+export async function accountAppeal(req: Request, res: Response): Promise<void> {
+  const input = accountAppealSchema.parse(req.body);
+  res.status(201).json({ data: await submitAccountAppeal(input) });
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {

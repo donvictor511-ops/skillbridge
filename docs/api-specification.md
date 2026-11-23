@@ -3,6 +3,10 @@
 Base path: `/api/v1`. Success: `{ "data": ... }`.
 Error: `{ "error": { "code", "message", "details?" } }`.
 
+## GET /search?q={term}
+
+Authenticated and available after onboarding. Searches visible profiles and skills, published posts and comments, member-visible community discussions, communities, open jobs, and active projects. Returns a small set of matches from each source. Private or held content is excluded.
+
 ## GET /health
 
 Public. Is the API running? Returns 200.
@@ -98,7 +102,19 @@ Public endpoint with privacy rules (optional session).
 - The owner can always view their own profile.
 - A malformed or unknown id gives 404 `PROFILE_NOT_FOUND`.
 - Returns `{ "data": { "profile": PublicProfile } }`. Never includes email,
-  goals, visibility, or timestamps.
+  goals, or visibility. `joinedAt` is the account creation date.
+
+### Block and report a profile
+
+All require a session. Blocking removes the connection and prevents either user
+from viewing the other's profile, starting or continuing messages, or connecting.
+Reports are saved for moderation review and accept a reason (`spam`,
+`harassment`, `inappropriate_content`, `impersonation`, or `other`) plus optional
+details (up to 1000 characters).
+
+- `POST /profiles/:userId/block` (idempotent),
+  `DELETE /profiles/:userId/block` (unblock)
+- `POST /profiles/:userId/report` with `{ "reason": "spam", "details": "..." }`
 
 ### Experience and education (your own profile)
 
@@ -205,6 +221,7 @@ Responses:
 - 403 `NOT_REQUEST_RECIPIENT`
 - 403 `ONBOARDING_REQUIRED`
 - 404 `CONNECTION_NOT_FOUND`
+
 - 409 `REQUEST_NOT_PENDING` or `REQUEST_ALREADY_HANDLED`
 
 ### PATCH /connections/:connectionId/reject
@@ -222,3 +239,136 @@ Removes a connection or cancels a request. Either participant can remove it.
 - 401 `UNAUTHENTICATED`
 - 403 `ONBOARDING_REQUIRED`
 - 404 `CONNECTION_NOT_FOUND`
+
+## Posts
+
+The feed is readable anonymously for public profiles. Members-only posts require
+an authenticated viewer; private posts are visible only to their author.
+Post-changing routes require an authenticated, onboarded account.
+
+- `GET /posts?limit=20&cursor=<post-id>` returns `{ data: Post[], nextCursor }`.
+- `POST /posts` creates a post. Body: `content` (1-3000), optional `imageUrl`
+  or `videoUrl` (HTTPS URL, at most one). `PATCH /posts/:postId` edits the
+  caller's post; `DELETE /posts/:postId` removes it.
+- `POST /posts/:postId/likes` likes a post idempotently; `DELETE` on the same
+  path removes the like. A new like by someone else notifies the post author.
+- `POST /posts/:postId/reposts` adds the post to the caller's feed; `DELETE` on
+  the same path undoes the caller's repost. A repost references the original
+  post, so its author, text, and media remain attributed to the source.
+- `POST /posts/:postId/shares` with `{ "recipientId": "<user-id>" }` shares a
+  post with one of the caller's accepted connections. The recipient must also
+  be allowed to view the post. The recipient receives a notification linking
+  back to it.
+- `GET /posts/:postId/comments`, `POST /posts/:postId/comments`,
+  `PATCH /posts/:postId/comments/:commentId`, and `DELETE` on that comment path
+  list and manage comments. Comment bodies use `content` (1-2000) and may
+  include one `imageUrl` or `videoUrl`. A new comment notifies the post author.
+- `POST /posts/media` accepts multipart field `file`: JPEG, PNG, WebP, MP4, or
+  WebM, up to 25 MB. Videos must be no longer than 90 seconds. The verified
+  upload is stored with Cloudinary and returns `mediaUrl`, `mediaType`, and
+  `duration`. Attach that URL to a post or comment to persist it there.
+
+## Communities and groups
+
+All routes require an authenticated, onboarded account. Communities are public
+to discover; only members can read or create discussions and replies. The
+community owner and moderators can update group details, review reports, and
+moderate content. Only the owner can assign moderator roles or delete a group.
+
+- `GET /communities?search=<text>&mine=true` searches groups or lists the
+  caller's memberships; `POST /communities` creates a group with `name`,
+  `description`, and optional `guidelines`.
+- `GET /communities/:communityId` reads group details, membership, discussions,
+  replies, and (for moderators) pending reports.
+- `PATCH /communities/:communityId` updates group details; `DELETE` on this
+  path deletes the group and its content (owner only).
+- `POST /communities/:communityId/membership` joins; `DELETE` leaves.
+- `DELETE /communities/:communityId/members/:memberId` removes a member;
+  `PATCH` with `{ "role": "moderator" | "member" }` manages moderator roles.
+- `POST /communities/:communityId/posts` creates a discussion;
+  `DELETE /communities/:communityId/posts/:postId` removes one.
+- `POST /communities/:communityId/posts/:postId/comments` adds a reply;
+  `DELETE` on that comment path removes it.
+- `POST /communities/:communityId/reports` files a group or discussion report.
+  Moderators review/dismiss reports with `PATCH /communities/:communityId/reports/:reportId`
+  and `{ "status": "reviewed" | "dismissed" }`.
+- New discussions and replies notify the relevant group members/authors with a
+  `community_post` notification that links to the group.
+
+## Jobs and project marketplace
+
+All marketplace endpoints require an authenticated, onboarded account. Users
+with the `client` capability can publish and manage listings. Users with the
+`professional` capability can apply to jobs and propose on projects.
+
+- `GET /marketplace/jobs?search=<text>&category=<category>&employmentType=<type>&remote=true|false&status=open|closed|all`
+  browses and filters jobs. `POST /marketplace/jobs` publishes a job; `GET` and `PATCH`
+  `/marketplace/jobs/:listingId` read and manage its details and status.
+- `POST /marketplace/jobs/:listingId/applications` submits a cover letter.
+  Listing owners review, accept, or reject applications with
+  `PATCH /marketplace/jobs/:listingId/applications/:applicationId`; applicants
+  can withdraw their pending applications. `GET /marketplace/jobs/applications/mine`
+  tracks the caller's applications.
+- `GET /marketplace/projects?search=<text>&category=<category>&status=open|closed|all`
+  browses project listings. `POST /marketplace/projects` publishes a project;
+  `GET` and `PATCH` `/marketplace/projects/:listingId` read and manage it.
+- `POST /marketplace/projects/:listingId/proposals` submits a proposal with a
+  cover letter, optional budget, and delivery estimate. Owners shortlist,
+  accept, or reject proposals with `PATCH /marketplace/projects/:listingId/proposals/:proposalId`;
+  professionals can withdraw pending proposals. `GET /marketplace/projects/proposals/mine`
+  tracks the caller's proposals.
+- Application and proposal changes notify the other participant. Accepted work
+  allows the client and professional to start a private conversation.
+
+## Notifications
+
+All routes require an authenticated, onboarded account and use private,
+no-store caching.
+
+- `GET /notifications` lists the caller's notifications.
+- Notification types include `connection_request`, `connection_accepted`,
+  `post_like`, `post_comment`, `post_shared`, `community_post`,
+  `job_application`, `job_application_update`, `project_proposal`, and
+  `project_proposal_update`.
+- `GET /notifications/unread-count` returns `{ data: { count } }`.
+- `PATCH /notifications/:notificationId/read` marks one notification read.
+- `PATCH /notifications/read-all` marks all of the caller's notifications read
+  and returns `{ data: { updatedCount } }`.
+- `DELETE /notifications/:notificationId` deletes one of the caller's
+  notifications (204).
+- `DELETE /notifications` clears all notifications for the caller and returns
+  `{ data: { deletedCount } }`.
+
+## Private messaging
+
+Messaging routes require an authenticated, onboarded account and use private,
+no-store caching. A conversation can be started with an accepted connection or
+with a profile visible to members; members can continue accessing an existing
+conversation if profile visibility or connection status later changes.
+Conversation membership is checked for every history and write request.
+
+- `GET /messages/conversations?archived=false&limit=30&cursor=<conversation-id>`
+  lists the caller's inbox (or archived conversations) with unread counts and
+  the latest message preview.
+- `POST /messages/conversations` with `{ "userId": "<user-id>" }` creates or
+  returns the one-to-one conversation with an accepted connection.
+- `GET /messages/conversations/:conversationId` reads a conversation summary.
+- `GET /messages/conversations/:conversationId/messages?limit=40&cursor=<message-id>`
+  returns a page of message history in chronological order. A cursor requests
+  older messages.
+- `POST /messages/conversations/:conversationId/messages` with
+  `{ "content": "..." }` sends a message (1-5000 characters) and notifies the
+  recipient.
+- `PATCH /messages/conversations/:conversationId/read` updates read receipts
+  and marks message notifications for that conversation as read.
+- `DELETE /messages/conversations/:conversationId` archives it for the caller;
+  `PATCH /messages/conversations/:conversationId/restore` restores it.
+- `DELETE /messages/conversations/:conversationId/messages/:messageId` lets
+  the caller delete a message for themselves with `{ "scope": "me" }`. The
+  sender can use `{ "scope": "everyone" }` to remove their message for both
+  participants; history keeps a deleted-message marker.
+- `GET /messages/unread-count` returns `{ data: { count } }`.
+- `GET /messages/events` is an authenticated Server-Sent Events stream for
+  new/deleted messages, read receipts, conversation changes, and presence.
+  Presence is tracked in the running server process and shared with accepted
+  connections.

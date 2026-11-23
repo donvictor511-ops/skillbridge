@@ -9,6 +9,15 @@ import {
 } from "./connectionsService";
 
 import type { ConnectionStatus } from "./connections.types";
+import { discoverKeys } from "../discover/discoverQueries";
+import type { QueryClient } from "@tanstack/react-query";
+
+function refreshNetworkQueries(queryClient: QueryClient) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: connectionKeys.all }),
+    queryClient.invalidateQueries({ queryKey: discoverKeys.all }),
+  ]);
+}
 
 export const connectionKeys = {
   all: ["connections"] as const,
@@ -36,10 +45,7 @@ export function useSendConnectionRequest() {
 
   return useMutation({
     mutationFn: sendConnectionRequest,
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: connectionKeys.all,
-      }),
+    onSuccess: () => refreshNetworkQueries(queryClient),
   });
 }
 
@@ -48,10 +54,7 @@ export function useAcceptConnectionRequest() {
 
   return useMutation({
     mutationFn: acceptConnectionRequest,
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: connectionKeys.all,
-      }),
+    onSuccess: () => refreshNetworkQueries(queryClient),
   });
 }
 
@@ -60,10 +63,7 @@ export function useRejectConnectionRequest() {
 
   return useMutation({
     mutationFn: rejectConnectionRequest,
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: connectionKeys.all,
-      }),
+    onSuccess: () => refreshNetworkQueries(queryClient),
   });
 }
 
@@ -72,9 +72,6 @@ export function useRemoveConnection() {
 
   return useMutation({
     mutationFn: removeConnection,
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: connectionKeys.all,
-      }),
+    onSuccess: () => refreshNetworkQueries(queryClient),
   });
 }

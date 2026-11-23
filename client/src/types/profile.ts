@@ -54,6 +54,7 @@ export interface ProfileBusiness {
 // What OTHER people may see.
 export interface PublicProfile {
   userId: string;
+  joinedAt: string;
   connectionCount: number;
   displayName: string;
   headline: string | null;
@@ -63,6 +64,7 @@ export interface PublicProfile {
   coverUrl: string | null;
   accountTypes: Capability[];
   interests: string[];
+  spokenLanguages: string[];
   skills: ProfileSkill[];
   experiences: ProfileExperience[];
   education: ProfileEducation[];
@@ -74,6 +76,7 @@ export interface PublicProfile {
 export interface OwnerProfile extends PublicProfile {
   visibility: ProfileVisibility;
   goals: string[];
+  allowCommunityInvites: boolean;
   createdAt: string;
   updatedAt: string;
 }

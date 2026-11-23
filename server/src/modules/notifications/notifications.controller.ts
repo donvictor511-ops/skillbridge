@@ -2,8 +2,11 @@ import type { Request, Response } from "express";
 import { AppError } from "../../utils/appError";
 import { notificationIdSchema } from "./notifications.schema";
 import {
+  clearNotifications as clearNotificationsService,
+  deleteNotification as deleteNotificationService,
   getUnreadNotificationCount,
   listNotifications,
+  markAllNotificationsAsRead as markAllNotificationsAsReadService,
   markNotificationAsRead,
 } from "./notifications.service";
 
@@ -70,4 +73,23 @@ export async function readNotification(
   res.status(200).json({
     data: result,
   });
+}
+
+export async function readAllNotifications(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const result = await markAllNotificationsAsReadService(user.id);
+  res.status(200).json({ data: result });
+}
+
+export async function removeNotification(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { notificationId } = notificationIdSchema.parse(req.params);
+  await deleteNotificationService(user.id, notificationId);
+  res.status(204).send();
+}
+
+export async function removeAllNotifications(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const result = await clearNotificationsService(user.id);
+  res.status(200).json({ data: result });
 }

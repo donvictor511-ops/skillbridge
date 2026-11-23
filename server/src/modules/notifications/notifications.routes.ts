@@ -3,7 +3,10 @@ import { requireAuth } from "../../middleware/requireAuth";
 import {
   getNotifications,
   getUnreadCount,
+  readAllNotifications,
   readNotification,
+  removeAllNotifications,
+  removeNotification,
 } from "./notifications.controller";
 
 export const notificationsRouter = Router();
@@ -22,6 +25,9 @@ notificationsRouter.get("/", getNotifications);
 
 // Get unread notification count.
 notificationsRouter.get("/unread-count", getUnreadCount);
+notificationsRouter.patch("/read-all", readAllNotifications);
+notificationsRouter.delete("/", removeAllNotifications);
 
 // Mark a notification as read.
 notificationsRouter.patch("/:notificationId/read", readNotification);
+notificationsRouter.delete("/:notificationId", removeNotification);

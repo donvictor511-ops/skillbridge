@@ -2,7 +2,7 @@ import { prisma } from "../../db/prisma";
 import { AppError } from "../../utils/appError";
 import { authUserSelect } from "./auth.types";
 import type { AuthUser } from "./auth.types";
-import type { LoginInput, RegisterInput } from "./auth.schema";
+import type { AccountAppealInput, LoginInput, RegisterInput } from "./auth.schema";
 import {
   getDummyPasswordHash,
   hashPassword,
@@ -10,6 +10,7 @@ import {
 } from "./password.service";
 import { createSession } from "./session.service";
 import type { CreatedSession } from "./session.service";
+import { notifyAdministrators } from "../notifications/notifications.service";
 
 // P2002 is Prisma's code for "unique constraint violated".
 // 23505 is PostgreSQL's own code for the same problem.
@@ -71,6 +72,10 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     );
   }
 
+  if (found.suspendedAt) {
+    throw new AppError(403, "ACCOUNT_SUSPENDED", `This account is suspended.${found.suspensionReason ? ` Reason: ${found.suspensionReason}` : ""} You can submit an appeal below.`);
+  }
+
   const session = await createSession(found.id);
 
   // Build the user by hand so the password hash can never slip through.
@@ -79,8 +84,51 @@ export async function loginUser(input: LoginInput): Promise<LoginResult> {
     email: found.email,
     createdAt: found.createdAt,
     capabilities: found.capabilities,
+    role: found.role,
+    suspendedAt: found.suspendedAt,
+    suspensionReason: found.suspensionReason,
+    restrictedUntil: found.restrictedUntil,
+    restrictionReason: found.restrictionReason,
     onboardedAt: found.onboardedAt,
   };
 
   return { user, session };
+}
+
+export async function submitAccountAppeal(input: AccountAppealInput): Promise<{ id: string; status: "pending" }> {
+  const found = await prisma.user.findUnique({
+    where: { email: input.email },
+    select: { id: true, email: true, passwordHash: true, suspendedAt: true, restrictedUntil: true },
+  });
+  const hashToCheck = found?.passwordHash ?? (await getDummyPasswordHash());
+  const passwordMatches = await verifyPassword(hashToCheck, input.password);
+  if (!found || !passwordMatches) throw new AppError(401, "INVALID_CREDENTIALS", "Email or password is incorrect.");
+
+  const now = new Date();
+  if (!found.suspendedAt && !(found.restrictedUntil && found.restrictedUntil > now)) {
+    throw new AppError(400, "APPEAL_NOT_AVAILABLE", "There is no active suspension or restriction to appeal.");
+  }
+
+  const latestAction = await prisma.adminAction.findFirst({
+    where: { targetUserId: found.id, action: { in: ["suspend", "restrict"] } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  const previousAppeal = await prisma.accountAppeal.findFirst({
+    where: { userId: found.id, adminActionId: latestAction?.id ?? null },
+    orderBy: { createdAt: "desc" },
+    select: { status: true },
+  });
+  if (previousAppeal) {
+    throw new AppError(409, "APPEAL_ALREADY_EXISTS", previousAppeal.status === "pending" ? "Your appeal is already waiting for review." : "An appeal has already been decided for this account action.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const appeal = await tx.accountAppeal.create({
+      data: { userId: found.id, adminActionId: latestAction?.id ?? null, message: input.message },
+      select: { id: true },
+    });
+    await notifyAdministrators(tx, { actorId: found.id, type: "account_appeal", message: "A member appealed an account restriction and needs review.", resourceId: appeal.id });
+    return { ...appeal, status: "pending" as const };
+  });
 }

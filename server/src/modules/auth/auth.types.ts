@@ -7,6 +7,11 @@ export interface AuthUser {
   email: string;
   createdAt: Date;
   capabilities: Capability[];
+  role: "member" | "admin";
+  suspendedAt: Date | null;
+  suspensionReason: string | null;
+  restrictedUntil: Date | null;
+  restrictionReason: string | null;
   // null until the person finishes onboarding
   onboardedAt: Date | null;
 }
@@ -18,5 +23,10 @@ export const authUserSelect = {
   email: true,
   createdAt: true,
   capabilities: true,
+  role: true,
+  suspendedAt: true,
+  suspensionReason: true,
+  restrictedUntil: true,
+  restrictionReason: true,
   onboardedAt: true,
 } as const;

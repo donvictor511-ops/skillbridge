@@ -313,6 +313,38 @@ else
   bad "Expected C unread count 0, got $C_UNREAD"
 fi
 
+section "9. Read all and delete notifications"
+
+call PATCH /notifications/read-all "" -b "$JAR_A"
+check "Mark all A's notifications read -> 200" 200 '"updatedCount":1'
+
+call GET /notifications/unread-count "" -b "$JAR_A"
+check "Unread count after mark-all-read -> 200" 200
+A_UNREAD="$(get_unread_count)" || A_UNREAD="-1"
+if [ "$A_UNREAD" = "0" ]; then
+  ok "Mark all read clears A's unread count"
+else
+  bad "Expected A's unread count 0, got $A_UNREAD"
+fi
+
+call GET /notifications "" -b "$JAR_A"
+ACCEPT_NOTIFICATION_ID="$(get_notification_id "connection_accepted" "$CONNECTION_ID")" || {
+  echo "Could not extract A's acceptance notification ID."
+  exit 1
+}
+
+call DELETE "/notifications/${ACCEPT_NOTIFICATION_ID}" "" -b "$JAR_A"
+check "Delete one of A's notifications -> 204" 204
+
+call DELETE "/notifications/${ACCEPT_NOTIFICATION_ID}" "" -b "$JAR_A"
+check "Deleting a missing notification returns 404" 404 '"code":"NOTIFICATION_NOT_FOUND"'
+
+call DELETE /notifications "" -b "$JAR_A"
+check "Clear all remaining notifications -> 200" 200 '"deletedCount":1'
+
+call GET /notifications "" -b "$JAR_A"
+check "A's notification list is empty after clearing" 200 '"data":[]'
+
 echo
 echo "Passed: $PASS    Failed: $FAIL"
 echo

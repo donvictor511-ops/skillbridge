@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../../middleware/requireAuth";
+import { requireAuth, requireWriteAccess } from "../../middleware/requireAuth";
 import {
   acceptConnectionRequest,
   createConnectionRequest,
@@ -23,11 +23,11 @@ connectionsRouter.use(requireAuth);
 connectionsRouter.get("/", getConnections);
 
 // Send a connection request.
-connectionsRouter.post("/:userId", createConnectionRequest);
+connectionsRouter.post("/:userId", requireWriteAccess, createConnectionRequest);
 
 // Accept or reject an incoming request.
-connectionsRouter.patch("/:connectionId/accept", acceptConnectionRequest);
-connectionsRouter.patch("/:connectionId/reject", rejectConnectionRequest);
+connectionsRouter.patch("/:connectionId/accept", requireWriteAccess, acceptConnectionRequest);
+connectionsRouter.patch("/:connectionId/reject", requireWriteAccess, rejectConnectionRequest);
 
 // Cancel a request or remove an existing connection.
 connectionsRouter.delete("/:connectionId", deleteConnection);

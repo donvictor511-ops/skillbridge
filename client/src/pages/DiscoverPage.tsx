@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactElement } from "react";
+import { useState, type FormEvent, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
   Users,
@@ -7,11 +7,13 @@ import {
   ArrowUpRight,
   UserPlus,
   UserMinus,
+  Sparkles,
+  UserRoundSearch,
 } from "lucide-react";
 
-import { Avatar, Badge, Button, Card, Input, Select } from "../components/ui";
+import { Avatar, Badge, Button, Card, Input, Select, Skeleton } from "../components/ui";
 import { profilePath } from "../app/paths";
-import { useDiscoverProfiles } from "../features/discover/discoverQueries";
+import { useDiscoverProfiles, useRecommendedProfiles } from "../features/discover/discoverQueries";
 import {
   useConnections,
   useRemoveConnection,
@@ -20,25 +22,38 @@ import {
 import type { DiscoverFilters } from "../types/discover";
 import type { Capability } from "../types/onboarding";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { LoadMoreButton } from "../components/ui/LoadMoreButton";
+
+interface DiscoverDraft {
+  search: string;
+  skill: string;
+  location: string;
+  accountType: string;
+  networkStatus: string;
+}
+
+function draftFromParams(params: URLSearchParams): DiscoverDraft {
+  return {
+    search: params.get("search") ?? "",
+    skill: params.get("skill") ?? "",
+    location: params.get("location") ?? "",
+    accountType: params.get("accountType") ?? "",
+    networkStatus: params.get("networkStatus") ?? "",
+  };
+}
 
 export default function DiscoverPage(): ReactElement {
   useDocumentTitle("Discover people | SkillBridge");
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [search, setSearch] = useState(searchParams.get("search") ?? "");
-  const [skill, setSkill] = useState(searchParams.get("skill") ?? "");
-  const [location, setLocation] = useState(searchParams.get("location") ?? "");
-  const [accountType, setAccountType] = useState(
-    searchParams.get("accountType") ?? "",
-  );
+  const paramsKey = searchParams.toString();
+  const [draftState, setDraftState] = useState(() => ({ key: paramsKey, value: draftFromParams(searchParams) }));
+  const draft = draftState.key === paramsKey ? draftState.value : draftFromParams(searchParams);
 
-  useEffect(() => {
-    setSearch(searchParams.get("search") ?? "");
-    setSkill(searchParams.get("skill") ?? "");
-    setLocation(searchParams.get("location") ?? "");
-    setAccountType(searchParams.get("accountType") ?? "");
-  }, [searchParams]);
+  function updateDraft(field: keyof DiscoverDraft, value: string): void {
+    setDraftState({ key: paramsKey, value: { ...draft, [field]: value } });
+  }
 
   const filters: DiscoverFilters = {
     search: searchParams.get("search") || undefined,
@@ -46,17 +61,19 @@ export default function DiscoverPage(): ReactElement {
     location: searchParams.get("location") || undefined,
     accountType:
       (searchParams.get("accountType") as Capability | null) ?? undefined,
+    networkStatus: (searchParams.get("networkStatus") as DiscoverFilters["networkStatus"] | null) ?? undefined,
     page: Math.max(1, Number(searchParams.get("page")) || 1),
     limit: 12,
   };
 
   const discoverQuery = useDiscoverProfiles(filters);
+  const recommendationsQuery = useRecommendedProfiles();
   const connectionsQuery = useConnections();
   const sendRequest = useSendConnectionRequest();
   const removeConnection = useRemoveConnection();
 
-  const profiles = discoverQuery.data?.profiles ?? [];
-  const pagination = discoverQuery.data?.pagination;
+  const profiles = discoverQuery.data?.pages.flatMap((page) => page.profiles) ?? [];
+  const pagination = discoverQuery.data?.pages.at(-1)?.pagination;
   const connections = connectionsQuery.data ?? [];
 
   const connectionByUserId = new Map(
@@ -68,10 +85,11 @@ export default function DiscoverPage(): ReactElement {
 
     const nextParams = new URLSearchParams();
 
-    if (search.trim()) nextParams.set("search", search.trim());
-    if (skill.trim()) nextParams.set("skill", skill.trim());
-    if (location.trim()) nextParams.set("location", location.trim());
-    if (accountType) nextParams.set("accountType", accountType);
+    if (draft.search.trim()) nextParams.set("search", draft.search.trim());
+    if (draft.skill.trim()) nextParams.set("skill", draft.skill.trim());
+    if (draft.location.trim()) nextParams.set("location", draft.location.trim());
+    if (draft.accountType) nextParams.set("accountType", draft.accountType);
+    if (draft.networkStatus) nextParams.set("networkStatus", draft.networkStatus);
 
     nextParams.set("page", "1");
     nextParams.set("limit", "12");
@@ -80,24 +98,10 @@ export default function DiscoverPage(): ReactElement {
   }
 
   function clearFilters(): void {
-    setSearch("");
-    setSkill("");
-    setLocation("");
-    setAccountType("");
-
     setSearchParams({
       page: "1",
       limit: "12",
     });
-  }
-
-  function changePage(page: number): void {
-    const nextParams = new URLSearchParams(searchParams);
-
-    nextParams.set("page", String(page));
-    setSearchParams(nextParams);
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -121,41 +125,48 @@ export default function DiscoverPage(): ReactElement {
 
         <Card>
           <form onSubmit={handleSearch} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Input
                 label="Search people"
                 placeholder="Search by name or keyword..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                value={draft.search}
+                onChange={(event) => updateDraft("search", event.target.value)}
               />
 
               <Input
                 label="Skill"
                 placeholder="e.g. React, UI design"
-                value={skill}
-                onChange={(event) => setSkill(event.target.value)}
+                value={draft.skill}
+                onChange={(event) => updateDraft("skill", event.target.value)}
               />
 
               <Input
                 label="Location"
                 placeholder="e.g. Benin City, Lagos"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
+                value={draft.location}
+                onChange={(event) => updateDraft("location", event.target.value)}
               />
 
               <Select
                 label="Account type"
-                value={accountType}
-                onChange={(event) => setAccountType(event.target.value)}
+                value={draft.accountType}
+                onChange={(event) => updateDraft("accountType", event.target.value)}
               >
                 <option value="">All account types</option>
                 <option value="professional">Professional</option>
                 <option value="client">Client or business</option>
               </Select>
+
+              <Select label="Network status" value={draft.networkStatus} onChange={(event) => updateDraft("networkStatus", event.target.value)}>
+                <option value="">Any network status</option>
+                <option value="not_connected">People I’m not connected to</option>
+                <option value="connected">My connections</option>
+                <option value="pending">Pending requests</option>
+              </Select>
             </div>
 
             <div className="flex flex-wrap gap-3 border-t border-line pt-4">
-              <Button type="submit" className="gap-2">
+              <Button type="submit" className="gap-2" loading={discoverQuery.isFetching && !discoverQuery.isFetchingNextPage} disabled={discoverQuery.isFetching}>
                 <Search className="h-4 w-4" aria-hidden="true" />
                 Find people
               </Button>
@@ -166,6 +177,20 @@ export default function DiscoverPage(): ReactElement {
             </div>
           </form>
         </Card>
+
+        <section className="mt-8" aria-labelledby="recommendations-heading">
+          <div className="mb-4 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-brand" aria-hidden="true" />
+            <div>
+              <h2 id="recommendations-heading" className="text-lg font-semibold text-navy">People you may want to meet</h2>
+              <p className="mt-0.5 text-sm text-muted">Suggestions based on shared skills, interests, location, and mutual connections.</p>
+            </div>
+          </div>
+          {recommendationsQuery.isPending ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading professional recommendations">{[0, 1, 2].map((item) => <Card key={item}><div className="flex items-center gap-3"><Skeleton className="h-12 w-12 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div></div><Skeleton className="mt-4 h-3 w-5/6" /><Skeleton className="mt-2 h-9 w-28" /></Card>)}</div>
+            : recommendationsQuery.isError ? <div className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger-strong" role="alert">Unable to load suggestions right now.<Button variant="secondary" size="sm" className="ml-3" onClick={() => void recommendationsQuery.refetch()}>Try again</Button></div>
+              : recommendationsQuery.data?.recommendations.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{recommendationsQuery.data.recommendations.slice(0, 6).map((person) => <Card key={person.userId}><div className="flex items-start gap-3"><Link to={profilePath(person.userId)} aria-label={`View ${person.displayName}'s profile`} className="shrink-0 rounded-full"><Avatar name={person.displayName} src={person.avatarUrl ?? undefined} size="md" /></Link><div className="min-w-0 flex-1"><Link to={profilePath(person.userId)} className="truncate font-semibold text-navy hover:text-brand">{person.displayName}</Link><p className="mt-1 line-clamp-2 text-sm text-muted">{person.headline || "SkillBridge member"}</p></div></div>{person.reasons?.length ? <ul className="mt-3 space-y-1 text-xs text-muted">{person.reasons.slice(0, 2).map((reason) => <li key={reason} className="flex items-center gap-1.5"><Sparkles className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />{reason}</li>)}</ul> : null}<div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3"><Link to={profilePath(person.userId)} className="text-sm font-semibold text-brand hover:underline">View profile</Link><Button size="sm" className="gap-1.5" loading={sendRequest.isPending && sendRequest.variables === person.userId} disabled={sendRequest.isPending} onClick={() => sendRequest.mutate(person.userId)}><UserPlus className="h-4 w-4" aria-hidden="true" />Connect</Button></div></Card>)}</div>
+                : <Card className="flex items-center gap-3 py-5"><UserRoundSearch className="h-5 w-5 text-muted" aria-hidden="true" /><p className="text-sm text-muted">We’ll suggest people as more professionals join SkillBridge.</p></Card>}
+        </section>
 
         <section className="mt-8" aria-labelledby="discover-heading">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -184,9 +209,7 @@ export default function DiscoverPage(): ReactElement {
           </div>
 
           {discoverQuery.isPending && (
-            <p className="text-sm text-muted" role="status">
-              Loading people...
-            </p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading people">{[0, 1, 2, 3, 4, 5].map((item) => <Card key={item}><div className="flex items-center gap-3"><Skeleton className="h-14 w-14 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div></div><Skeleton className="mt-4 h-3 w-5/6" /><Skeleton className="mt-2 h-3 w-3/5" /><Skeleton className="mt-5 h-9 w-32" /></Card>)}</div>
           )}
 
           {discoverQuery.isError && (
@@ -265,11 +288,9 @@ export default function DiscoverPage(): ReactElement {
               return (
                 <Card key={person.userId}>
                   <div className="flex items-start gap-3">
-                    <Avatar
-                      name={person.displayName}
-                      src={person.avatarUrl ?? undefined}
-                      size="lg"
-                    />
+                    <Link to={profilePath(person.userId)} aria-label={`View ${person.displayName}'s profile`} className="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                      <Avatar name={person.displayName} src={person.avatarUrl ?? undefined} size="lg" />
+                    </Link>
 
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-semibold text-navy">
@@ -376,32 +397,7 @@ export default function DiscoverPage(): ReactElement {
             })}
           </div>
 
-          {pagination && pagination.totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-between gap-4 border-t border-line pt-5">
-              <Button
-                variant="secondary"
-                disabled={pagination.page <= 1 || discoverQuery.isFetching}
-                onClick={() => changePage(pagination.page - 1)}
-              >
-                Previous
-              </Button>
-
-              <p className="text-sm text-muted">
-                Page {pagination.page} of {pagination.totalPages}
-              </p>
-
-              <Button
-                variant="secondary"
-                disabled={
-                  pagination.page >= pagination.totalPages ||
-                  discoverQuery.isFetching
-                }
-                onClick={() => changePage(pagination.page + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
+          {pagination && discoverQuery.hasNextPage ? <LoadMoreButton label="people" loaded={profiles.length} total={pagination.total} loading={discoverQuery.isFetchingNextPage} onClick={() => void discoverQuery.fetchNextPage()} /> : null}
         </section>
       </div>
     </div>

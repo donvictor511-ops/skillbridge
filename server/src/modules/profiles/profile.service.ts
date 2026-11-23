@@ -10,6 +10,7 @@ import {
 } from "./profile.queries";
 import type { UpdateProfileInput } from "./profile.schema";
 import type { OwnerProfile, PublicProfile } from "./profile.types";
+import { usersHaveBlockedEachOther } from "./profile.blocking";
 
 export function profileNotFound(): AppError {
   return new AppError(404, "PROFILE_NOT_FOUND", "Profile not found.");
@@ -56,6 +57,14 @@ export async function getProfileForViewer(
   const row = await findProfileRow(targetUserId);
 
   if (!row) {
+    throw profileNotFound();
+  }
+
+  if (
+    viewer &&
+    viewer.id !== targetUserId &&
+    (await usersHaveBlockedEachOther(viewer.id, targetUserId))
+  ) {
     throw profileNotFound();
   }
 

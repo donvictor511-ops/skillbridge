@@ -1,7 +1,38 @@
 import { prisma } from "../../db/prisma";
+import type { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../utils/appError";
 
-export type NotificationKind = "connection_request" | "connection_accepted";
+export type NotificationKind =
+  | "connection_request"
+  | "connection_accepted"
+  | "post_like"
+  | "post_comment"
+  | "post_shared"
+  | "message"
+  | "community_post"
+  | "community_invite"
+  | "job_application"
+  | "job_application_update"
+  | "interview_scheduled"
+  | "interview_updated"
+  | "project_proposal"
+  | "project_proposal_update"
+  | "moderation_report"
+  | "account_appeal"
+  | "content_moderation_case"
+  | "content_moderation_update"
+  | "account_appeal_update";
+
+export async function notifyAdministrators(
+  tx: Prisma.TransactionClient,
+  input: { actorId: string; type: "moderation_report" | "account_appeal" | "content_moderation_case"; message: string; resourceId: string },
+): Promise<void> {
+  const admins = await tx.user.findMany({ where: { role: "admin", id: { not: input.actorId } }, select: { id: true } });
+  if (!admins.length) return;
+  await tx.notification.createMany({
+    data: admins.map(({ id }) => ({ recipientId: id, actorId: input.actorId, type: input.type, message: input.message, resourceId: input.resourceId })),
+  });
+}
 
 interface CreateNotificationInput {
   recipientId: string;
@@ -117,4 +148,31 @@ export async function markNotificationAsRead(
       isRead: true,
     },
   });
+}
+
+export async function markAllNotificationsAsRead(userId: string) {
+  const result = await prisma.notification.updateMany({
+    where: { recipientId: userId, isRead: false },
+    data: { isRead: true },
+  });
+
+  return { updatedCount: result.count };
+}
+
+export async function deleteNotification(userId: string, notificationId: string) {
+  const result = await prisma.notification.deleteMany({
+    where: { id: notificationId, recipientId: userId },
+  });
+
+  if (result.count !== 1) {
+    throw new AppError(404, "NOTIFICATION_NOT_FOUND", "Notification not found.");
+  }
+}
+
+export async function clearNotifications(userId: string) {
+  const result = await prisma.notification.deleteMany({
+    where: { recipientId: userId },
+  });
+
+  return { deletedCount: result.count };
 }

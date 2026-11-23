@@ -1,7 +1,9 @@
 import type { ReactElement } from "react";
-import { Check, Clock, UserPlus, UserMinus, X } from "lucide-react";
+import { Check, Clock, MessageCircle, UserPlus, UserMinus, X } from "lucide-react";
+import { Link } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "../../components/ui";
+import { Button, getButtonClasses } from "../../components/ui";
+import { paths } from "../../app/paths";
 import { profileKeys } from "./profileQueries";
 import { useCurrentUser } from "../auth/authQueries";
 import {
@@ -96,6 +98,18 @@ export function ProfileConnectionActions({
     return null;
   }
 
+  if (!currentUser.onboardedAt) return null;
+
+  const messageLink = (
+    <Link
+      to={`${paths.messages}?userId=${encodeURIComponent(profileUserId)}`}
+      className={getButtonClasses({ variant: "secondary", size: "md", fullWidth: false })}
+    >
+      <MessageCircle className="h-4 w-4" aria-hidden="true" />
+      Message
+    </Link>
+  );
+
   // Wait for the authenticated user's connection list.
   if (connectionsLoading) {
     return (
@@ -108,7 +122,7 @@ export function ProfileConnectionActions({
   // No relationship yet.
   if (!connection) {
     return (
-      <div className="mt-5">
+      <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button
           onClick={handleConnect}
           loading={sendRequest.isPending}
@@ -117,6 +131,7 @@ export function ProfileConnectionActions({
           <UserPlus className="h-4 w-4" aria-hidden="true" />
           Connect
         </Button>
+        {messageLink}
 
         {sendRequest.isError ? (
           <p className="mt-2 text-sm text-danger" role="alert">
@@ -135,6 +150,7 @@ export function ProfileConnectionActions({
           <Check className="h-4 w-4" aria-hidden="true" />
           Connected
         </span>
+        {messageLink}
 
         <Button
           variant="danger"
@@ -164,6 +180,7 @@ export function ProfileConnectionActions({
           <Clock className="h-4 w-4" aria-hidden="true" />
           Request pending
         </span>
+        {messageLink}
 
         <Button
           variant="secondary"
@@ -192,6 +209,7 @@ export function ProfileConnectionActions({
           <Clock className="h-4 w-4" aria-hidden="true" />
           Received connection request
         </span>
+        {messageLink}
 
         <Button
           size="sm"
@@ -229,6 +247,7 @@ export function ProfileConnectionActions({
       <span className="inline-flex items-center gap-2 rounded-full bg-page px-3 py-2 text-sm font-medium text-muted">
         Request rejected
       </span>
+      {messageLink}
 
       <Button
         variant="secondary"

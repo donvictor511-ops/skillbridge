@@ -6,6 +6,11 @@ export interface AuthUser {
   email: string;
   createdAt: string;
   capabilities: Capability[];
+  role: "member" | "admin";
+  suspendedAt: string | null;
+  suspensionReason: string | null;
+  restrictedUntil: string | null;
+  restrictionReason: string | null;
   // null until the person finishes onboarding
   onboardedAt: string | null;
 }

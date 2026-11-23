@@ -32,6 +32,17 @@ export async function getProfile(userId: string): Promise<PublicProfile> {
   return response.data.data.profile;
 }
 
+export async function blockProfileUser(userId: string): Promise<void> {
+  await apiClient.post(`/profiles/${encodeURIComponent(userId)}/block`);
+}
+
+export async function reportProfileUser(
+  userId: string,
+  input: { reason: string; details?: string },
+): Promise<void> {
+  await apiClient.post(`/profiles/${encodeURIComponent(userId)}/report`, input);
+}
+
 // Upload a profile picture or cover image to Cloudinary through our backend.
 export async function uploadProfileImage(
   imageType: ProfileImageType,

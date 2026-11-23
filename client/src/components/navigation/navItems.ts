@@ -18,7 +18,7 @@ export const primaryNavItems: NavItem[] = [
 export const footerLinkGroups: FooterLinkGroup[] = [
   {
     title: "SkillBridge",
-    links: [{ label: "Home", to: paths.home }],
+    links: [{ label: "Home", to: paths.home }, { label: "Community guidelines", to: paths.guidelines }],
   },
   {
     title: "Account",

@@ -10,6 +10,7 @@ import { ProfileHeader } from "./ProfileHeader";
 import { ProfileConnectionActions } from "./ProfileConnectionActions";
 import { ProjectsSection } from "./ProjectsSection";
 import { SkillsSection } from "./SkillsSection";
+import { ProfilePostsSection } from "./ProfilePostsSection";
 
 interface VisibilityInfo {
   icon: LucideIcon;
@@ -80,6 +81,8 @@ export function ProfileView({
         isOwner={isOwner}
       />
 
+      {profile.spokenLanguages.length ? <section className="rounded-2xl border border-line bg-surface p-5"><h2 className="text-lg font-semibold text-navy">Languages</h2><ul className="mt-3 flex flex-wrap gap-2">{profile.spokenLanguages.map((language) => <li key={language} className="rounded-full bg-brand/10 px-3 py-1.5 text-sm font-medium text-brand">{language}</li>)}</ul></section> : null}
+
       <SkillsSection skills={profile.skills} isOwner={isOwner} />
 
       <ExperienceSection experiences={profile.experiences} isOwner={isOwner} />
@@ -91,6 +94,8 @@ export function ProfileView({
       {profile.business ? (
         <BusinessSection business={profile.business} />
       ) : null}
+
+      <ProfilePostsSection userId={profile.userId} />
     </div>
   );
 }

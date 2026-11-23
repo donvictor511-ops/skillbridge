@@ -50,7 +50,7 @@ function sendError(
 
 export function errorHandler(
   err: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ): void {
@@ -91,12 +91,20 @@ export function errorHandler(
   // 3. Multer upload errors
   if (err instanceof multer.MulterError) {
     const isTooLarge = err.code === "LIMIT_FILE_SIZE";
+    const isPostMedia = req.path.endsWith("/posts/media");
+    const isAudioMessage = req.path.endsWith("/messages/audio") || req.path.endsWith("/calls/audio");
 
     sendError(res, isTooLarge ? 413 : 400, {
       error: {
-        code: isTooLarge ? "IMAGE_TOO_LARGE" : "IMAGE_UPLOAD_ERROR",
+        code: isTooLarge
+          ? isPostMedia
+            ? "MEDIA_TOO_LARGE"
+            : isAudioMessage ? "AUDIO_TOO_LARGE" : "IMAGE_TOO_LARGE"
+          : "IMAGE_UPLOAD_ERROR",
         message: isTooLarge
-          ? "The image must not exceed 5 MB."
+          ? isPostMedia
+            ? "Post media must not exceed 25 MB."
+            : isAudioMessage ? "A voice message must not exceed 12 MB." : "The image must not exceed 5 MB."
           : "The image could not be accepted. Please check your upload and try again.",
       },
     });

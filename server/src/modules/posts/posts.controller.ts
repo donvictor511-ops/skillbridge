@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import { AppError } from "../../utils/appError";
 import {
   commentParamsSchema,
@@ -6,20 +7,28 @@ import {
   createPostSchema,
   postFeedQuerySchema,
   postParamsSchema,
+  reactToPostSchema,
+  sharePostSchema,
   updateCommentSchema,
   updatePostSchema,
 } from "./posts.schema";
 import {
   createComment as createCommentService,
   createPost as createPostService,
+  createRepost as createRepostService,
   deleteComment as deleteCommentService,
   deletePost as deletePostService,
   likePost as likePostService,
   listComments as listCommentsService,
   listPosts as listPostsService,
   unlikePost as unlikePostService,
+  sharePostWithConnection as sharePostWithConnectionService,
+  removeRepost as removeRepostService,
   updateComment as updateCommentService,
   updatePost as updatePostService,
+  reportPost as reportPostService,
+  listProfilePosts as listProfilePostsService,
+  reactToPost as reactToPostService,
 } from "./posts.service";
 import type { AuthUser } from "../auth/auth.types";
 
@@ -48,6 +57,20 @@ export async function getPosts(req: Request, res: Response): Promise<void> {
   const result = await listPostsService(req.user, query);
 
   res.status(200).json(result);
+}
+
+export async function getProfilePosts(req: Request, res: Response): Promise<void> {
+  const authorId = z.uuid().parse(req.params.userId);
+  const query = postFeedQuerySchema.parse(req.query);
+  res.status(200).json(await listProfilePostsService(authorId, req.user, query));
+}
+
+export async function reactToPost(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId } = postParamsSchema.parse(req.params);
+  const { reactionType } = reactToPostSchema.parse(req.body);
+  await reactToPostService(user.id, postId, reactionType);
+  res.status(204).send();
 }
 
 export async function createPost(req: Request, res: Response): Promise<void> {
@@ -94,6 +117,31 @@ export async function unlikePost(req: Request, res: Response): Promise<void> {
   res.status(204).send();
 }
 
+export async function sharePostWithConnection(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId } = postParamsSchema.parse(req.params);
+  const input = sharePostSchema.parse(req.body);
+  const result = await sharePostWithConnectionService(user.id, postId, input);
+  res.status(201).json({ data: result });
+}
+
+export async function createRepost(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId } = postParamsSchema.parse(req.params);
+  const result = await createRepostService(user.id, postId);
+  res.status(201).json({ data: result });
+}
+
+export async function removeRepost(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId } = postParamsSchema.parse(req.params);
+  await removeRepostService(user.id, postId);
+  res.status(204).send();
+}
+
 export async function getComments(req: Request, res: Response): Promise<void> {
   const user = getAuthenticatedUser(req);
   const { postId } = postParamsSchema.parse(req.params);
@@ -136,4 +184,16 @@ export async function deleteComment(
   await deleteCommentService(user.id, postId, commentId);
 
   res.status(204).send();
+}
+
+export async function reportPost(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId } = postParamsSchema.parse({ postId: req.params.postId });
+  const commentId = req.params.commentId ? commentParamsSchema.parse(req.params).commentId : undefined;
+  const input = z.object({
+    reason: z.enum(["spam", "harassment", "inappropriate_content", "misinformation", "other"]),
+    details: z.string().trim().max(1000).optional(),
+  }).parse(req.body);
+  await reportPostService(user.id, postId, commentId, input);
+  res.status(201).json({ data: { reported: true } });
 }

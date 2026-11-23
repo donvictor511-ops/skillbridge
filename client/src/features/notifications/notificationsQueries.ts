@@ -3,7 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getNotifications,
   getUnreadNotificationCount,
+  clearNotifications,
+  deleteNotification,
   markNotificationAsRead,
+  markAllNotificationsAsRead,
 } from "./notificationsService";
 
 export const notificationKeys = {
@@ -56,4 +59,29 @@ export function useMarkNotificationAsRead() {
       ]);
     },
   });
+}
+
+function useRefreshNotifications() {
+  const queryClient = useQueryClient();
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: notificationKeys.list() }),
+      queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() }),
+    ]);
+  };
+}
+
+export function useMarkAllNotificationsAsRead() {
+  const refresh = useRefreshNotifications();
+  return useMutation({ mutationFn: markAllNotificationsAsRead, onSuccess: refresh });
+}
+
+export function useDeleteNotification() {
+  const refresh = useRefreshNotifications();
+  return useMutation({ mutationFn: deleteNotification, onSuccess: refresh });
+}
+
+export function useClearNotifications() {
+  const refresh = useRefreshNotifications();
+  return useMutation({ mutationFn: clearNotifications, onSuccess: refresh });
 }

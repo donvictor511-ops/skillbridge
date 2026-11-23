@@ -8,6 +8,7 @@ export interface ConnectionUser {
   headline: string | null;
   location: string | null;
   avatarUrl: string | null;
+  mutualConnectionCount?: number;
 }
 
 export interface Connection {

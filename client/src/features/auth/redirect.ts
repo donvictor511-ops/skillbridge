@@ -21,5 +21,5 @@ export function getSafeRedirectPath(state: unknown): string {
     }
   }
 
-  return paths.dashboard;
+  return paths.posts;
 }

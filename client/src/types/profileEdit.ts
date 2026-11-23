@@ -13,6 +13,8 @@ export interface ProfilePatch {
   visibility?: ProfileVisibility;
   interests?: string[];
   goals?: string[];
+  spokenLanguages?: string[];
+  allowCommunityInvites?: boolean;
 }
 
 export interface ExperienceInput {

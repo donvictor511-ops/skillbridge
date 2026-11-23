@@ -8,6 +8,7 @@ import { EducationManager } from "../features/profiles/edit/EducationManager";
 import { ExperienceManager } from "../features/profiles/edit/ExperienceManager";
 import { ProjectsManager } from "../features/profiles/edit/ProjectsManager";
 import { SkillsEditor } from "../features/profiles/edit/SkillsEditor";
+import { ProfilePreferencesForm } from "../features/profiles/edit/ProfilePreferencesForm";
 import { useMyProfile } from "../features/profiles/profileQueries";
 import { ProfileSkeleton } from "../features/profiles/ProfileStates";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
@@ -68,6 +69,7 @@ export default function EditProfilePage(): ReactElement {
         {profileQuery.data ? (
           <div className="space-y-6">
             <BasicsForm profile={profileQuery.data} />
+            <ProfilePreferencesForm profile={profileQuery.data} />
             <SkillsEditor profile={profileQuery.data} />
             <ExperienceManager experiences={profileQuery.data.experiences} />
             <EducationManager education={profileQuery.data.education} />

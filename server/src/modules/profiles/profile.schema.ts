@@ -104,6 +104,8 @@ export const updateProfileSchema = z
       .min(1, "Choose at least one goal.")
       .transform(unique)
       .optional(),
+    spokenLanguages: z.array(z.string().trim().min(1).max(50)).max(20).transform(unique).optional(),
+    allowCommunityInvites: z.boolean().optional(),
   })
   .refine(
     (value) => Object.values(value).some((field) => field !== undefined),

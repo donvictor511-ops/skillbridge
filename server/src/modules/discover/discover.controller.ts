@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { discoverQuerySchema } from "./discover.schema";
-import { discoverProfiles } from "./discover.service";
+import { discoverProfiles, recommendProfiles } from "./discover.service";
 import { AppError } from "../../utils/appError";
 
 export async function getDiscoverProfiles(
@@ -30,4 +30,10 @@ export async function getDiscoverProfiles(
   res.status(200).json({
     data: result,
   });
+}
+
+export async function getRecommendedProfiles(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw new AppError(401, "UNAUTHENTICATED", "Please log in to discover profiles.");
+  if (!req.user.onboardedAt) throw new AppError(403, "ONBOARDING_REQUIRED", "Complete onboarding before discovering profiles.");
+  res.status(200).json({ data: await recommendProfiles(req.user.id) });
 }

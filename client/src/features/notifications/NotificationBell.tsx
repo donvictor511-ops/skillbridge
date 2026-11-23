@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import { useNavigate } from "react-router";
-import { Bell, CheckCheck, LoaderCircle } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "react-router";
+import { Bell, Check, CheckCheck, LoaderCircle, Trash2 } from "lucide-react";
 
 import { paths } from "../../app/paths";
+import { profilePath } from "../../app/paths";
 import { Avatar } from "../../components/ui/Avatar";
 import {
+  useClearNotifications,
+  useDeleteNotification,
+  useMarkAllNotificationsAsRead,
   useMarkNotificationAsRead,
   useNotifications,
   useUnreadNotificationCount,
@@ -30,43 +35,97 @@ function formatNotificationDate(date: string): string {
 function NotificationItem({
   notification,
   onClick,
+  onMarkRead,
+  onDelete,
+  busy,
 }: {
   notification: Notification;
   onClick: () => void;
+  onMarkRead: () => void;
+  onDelete: () => void;
+  busy: boolean;
 }): ReactElement {
   const actorName = notification.actor.profile?.displayName ?? "Someone";
   const avatarUrl = notification.actor.profile?.avatarUrl ?? null;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex w-full gap-3 border-b border-line px-4 py-3 text-left transition-colors hover:bg-page ${
-        notification.isRead ? "bg-surface" : "bg-brand/5"
-      }`}
+    <div
+      className={`flex gap-2 border-b border-line px-3 py-3 ${notification.isRead ? "bg-surface" : "bg-brand/5"}`}
     >
-      <Avatar name={actorName} src={avatarUrl} size="md" />
+      <Link
+        to={profilePath(notification.actor.id)}
+        aria-label={`View ${actorName}'s profile`}
+        onClick={(event) => event.stopPropagation()}
+        className="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      >
+        <Avatar name={actorName} src={avatarUrl} size="md" />
+      </Link>
 
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm text-ink">{notification.message}</span>
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex min-w-0 flex-1 gap-3 text-left transition-colors hover:bg-page"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm text-ink">
+            {notification.type === "post_like" ||
+            notification.type === "post_comment" ||
+            notification.type === "post_shared" ||
+            notification.type === "community_post" ||
+            notification.type === "community_invite" ||
+            notification.type === "job_application" ||
+            notification.type === "job_application_update" ||
+            notification.type === "interview_scheduled" ||
+            notification.type === "interview_updated" ||
+            notification.type === "project_proposal" ||
+            notification.type === "project_proposal_update"
+              ? `${actorName} ${notification.message}`
+              : notification.message}
+          </span>
 
-        <span className="mt-1 block text-xs text-muted">
-          {formatNotificationDate(notification.createdAt)}
+          <span className="mt-1 block text-xs text-muted">
+            {formatNotificationDate(notification.createdAt)}
+          </span>
         </span>
-      </span>
+
+        {!notification.isRead && (
+          <span
+            className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-brand"
+            aria-label="Unread"
+          />
+        )}
+      </button>
 
       {!notification.isRead && (
-        <span
-          className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-brand"
-          aria-label="Unread"
-        />
+        <button
+          type="button"
+          onClick={onMarkRead}
+          disabled={busy}
+          aria-label="Mark notification as read"
+          title="Mark as read"
+          className="rounded-control p-2 text-muted hover:bg-page hover:text-brand disabled:opacity-50"
+        >
+          <Check className="h-4 w-4" aria-hidden="true" />
+        </button>
       )}
-    </button>
+
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={busy}
+        aria-label="Delete notification"
+        title="Delete notification"
+        className="rounded-control p-2 text-muted hover:bg-danger/10 hover:text-danger-strong disabled:opacity-50"
+      >
+        <Trash2 className="h-4 w-4" aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
 export function NotificationBell(): ReactElement {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -74,11 +133,14 @@ export function NotificationBell(): ReactElement {
     data: notifications,
     isLoading,
     isError,
-  } = useNotifications(true, 60_000);
+  } = useNotifications(true, 30_000);
 
   const { data: unreadCount = 0 } = useUnreadNotificationCount(true, 30_000);
 
   const markAsReadMutation = useMarkNotificationAsRead();
+  const markAllAsReadMutation = useMarkAllNotificationsAsRead();
+  const deleteMutation = useDeleteNotification();
+  const clearMutation = useClearNotifications();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -113,14 +175,75 @@ export function NotificationBell(): ReactElement {
     }
 
     setIsOpen(false);
-    navigate(paths.connections);
+    if (notification.type === "message" && notification.resourceId) {
+      navigate(`${paths.messages}?conversationId=${encodeURIComponent(notification.resourceId)}`);
+      return;
+    }
+    if (notification.type === "community_post" && notification.resourceId) {
+      navigate(`${paths.communities}?communityId=${encodeURIComponent(notification.resourceId)}`);
+      return;
+    }
+    if (notification.type === "community_invite") {
+      navigate(paths.communities);
+      return;
+    }
+    if (notification.type === "moderation_report") {
+      navigate(`${paths.admin}?section=reports`);
+      return;
+    }
+    if (notification.type === "account_appeal") {
+      navigate(`${paths.admin}?section=appeals`);
+      return;
+    }
+    if (notification.type === "content_moderation_case") {
+      navigate(`${paths.admin}?section=auto_review`);
+      return;
+    }
+    if (notification.type === "account_appeal_update") {
+      void queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      navigate(paths.dashboard);
+      return;
+    }
+    if (notification.type === "content_moderation_update") {
+      navigate(paths.dashboard);
+      return;
+    }
+    if (notification.type.startsWith("job_application") && notification.resourceId) {
+      navigate(`${paths.jobs}/${encodeURIComponent(notification.resourceId)}`);
+      return;
+    }
+    if (notification.type.startsWith("interview_")) {
+      navigate(paths.jobApplications);
+      return;
+    }
+    if (notification.type.startsWith("project_proposal") && notification.resourceId) {
+      navigate(`${paths.projects}/${encodeURIComponent(notification.resourceId)}`);
+      return;
+    }
+    if (
+      notification.type === "post_like" ||
+      notification.type === "post_comment" ||
+      notification.type === "post_shared"
+    ) {
+      navigate({
+        pathname: paths.posts,
+        hash: notification.resourceId ? `#post-${notification.resourceId}` : "",
+      });
+    } else {
+      navigate(paths.connections);
+    }
+  }
+
+  function toggleNotifications(): void {
+    if (!isOpen) void queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
+    setIsOpen((previous) => !previous);
   }
 
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setIsOpen((previous) => !previous)}
+        onClick={toggleNotifications}
         aria-label={
           unreadCount > 0
             ? `Notifications, ${unreadCount} unread`
@@ -155,6 +278,31 @@ export function NotificationBell(): ReactElement {
             )}
           </div>
 
+          {notifications && notifications.length > 0 && (
+            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2">
+              <button
+                type="button"
+                onClick={() => markAllAsReadMutation.mutate()}
+                disabled={unreadCount === 0 || markAllAsReadMutation.isPending}
+                className="text-xs font-semibold text-brand hover:text-brand-hover disabled:opacity-50"
+              >
+                {markAllAsReadMutation.isPending ? "Marking read…" : "Mark all as read"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Delete all your notifications? This cannot be undone.")) {
+                    clearMutation.mutate();
+                  }
+                }}
+                disabled={clearMutation.isPending}
+                className="text-xs font-semibold text-danger-strong hover:underline disabled:opacity-50"
+              >
+                {clearMutation.isPending ? "Clearing…" : "Clear all"}
+              </button>
+            </div>
+          )}
+
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted">
@@ -179,6 +327,9 @@ export function NotificationBell(): ReactElement {
                   key={notification.id}
                   notification={notification}
                   onClick={() => handleNotificationClick(notification)}
+                  onMarkRead={() => markAsReadMutation.mutate(notification.id)}
+                  onDelete={() => deleteMutation.mutate(notification.id)}
+                  busy={markAsReadMutation.isPending || deleteMutation.isPending}
                 />
               ))
             )}
@@ -195,6 +346,18 @@ export function NotificationBell(): ReactElement {
                 View connections
               </button>
             </div>
+          )}
+
+          {(markAllAsReadMutation.isError ||
+            deleteMutation.isError ||
+            clearMutation.isError ||
+            markAsReadMutation.isError) && (
+            <p
+              role="alert"
+              className="border-t border-line px-4 py-2 text-xs text-danger-strong"
+            >
+              Could not update notifications. Please try again.
+            </p>
           )}
         </div>
       )}

@@ -24,10 +24,13 @@ async function findProfileRow(userId: string) {
       visibility: true,
       interests: true,
       goals: true,
+      spokenLanguages: true,
+      allowCommunityInvites: true,
       createdAt: true,
       updatedAt: true,
       user: {
         select: {
+          createdAt: true,
           capabilities: true,
           skills: { select: { skill: { select: { id: true, name: true } } } },
           businessProfile: {
@@ -154,6 +157,7 @@ export function toPublicProfile(
 
   return {
     userId: row.userId,
+    joinedAt: row.user.createdAt.toISOString(),
     connectionCount,
     displayName: row.displayName,
     headline: row.headline,
@@ -163,6 +167,7 @@ export function toPublicProfile(
     coverUrl: row.coverUrl,
     accountTypes: row.user.capabilities,
     interests: row.interests,
+    spokenLanguages: row.spokenLanguages,
     skills,
     experiences: row.experiences.map((experience) => ({
       id: experience.id,
@@ -197,6 +202,7 @@ export function toOwnerProfile(
     ...toPublicProfile(row, connectionCount),
     visibility: row.visibility,
     goals: row.goals,
+    allowCommunityInvites: row.allowCommunityInvites,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

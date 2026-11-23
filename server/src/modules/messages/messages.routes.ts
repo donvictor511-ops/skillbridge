@@ -1,0 +1,26 @@
+import { Router } from "express";
+import { requireAuth, requireWriteAccess } from "../../middleware/requireAuth";
+import * as controller from "./messages.controller";
+import { uploadSinglePostMedia } from "../../middleware/uploadPostMedia";
+import { uploadPostMediaController } from "../posts/posts.media.controller";
+import { uploadSingleAudioMessage } from "../../middleware/uploadAudioMessage";
+import { uploadAudioMessage } from "./messages.audio.controller";
+
+export const messagesRouter = Router();
+messagesRouter.use((_req, res, next) => { res.setHeader("Cache-Control", "private, no-store"); next(); });
+messagesRouter.use(requireAuth);
+messagesRouter.get("/events", controller.openEvents);
+messagesRouter.post("/media", requireWriteAccess, uploadSinglePostMedia, uploadPostMediaController);
+messagesRouter.post("/audio", requireWriteAccess, uploadSingleAudioMessage, uploadAudioMessage);
+messagesRouter.get("/unread-count", controller.unreadCount);
+messagesRouter.get("/conversations", controller.conversations);
+messagesRouter.post("/conversations", requireWriteAccess, controller.createConversation);
+messagesRouter.get("/conversations/:conversationId", controller.conversation);
+messagesRouter.patch("/conversations/:conversationId/read", controller.readConversation);
+messagesRouter.delete("/conversations/:conversationId", controller.deleteConversation);
+messagesRouter.patch("/conversations/:conversationId/restore", controller.restore);
+messagesRouter.get("/conversations/:conversationId/messages", controller.messageHistory);
+messagesRouter.post("/conversations/:conversationId/messages", requireWriteAccess, controller.createMessage);
+messagesRouter.delete("/conversations/:conversationId/messages/:messageId", controller.removeMessage);
+messagesRouter.patch("/conversations/:conversationId/messages/:messageId", requireWriteAccess, controller.editMessage);
+messagesRouter.post("/conversations/:conversationId/messages/:messageId/reactions", requireWriteAccess, controller.reactToMessage);

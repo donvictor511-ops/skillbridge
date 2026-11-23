@@ -2,6 +2,8 @@ import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../db/prisma";
 import { AppError } from "../../utils/appError";
 import type { ConnectionListQuery } from "./connections.schema";
+import { usersHaveBlockedEachOther } from "../profiles/profile.blocking";
+import { getMutualConnectionCounts } from "./mutualConnections";
 
 function getUserPair(firstId: string, secondId: string) {
   const first = firstId.toLowerCase();
@@ -22,6 +24,10 @@ export async function sendConnectionRequest(
       "SELF_CONNECTION",
       "You cannot send a connection request to yourself.",
     );
+  }
+
+  if (await usersHaveBlockedEachOther(requesterId, recipientId)) {
+    throw new AppError(404, "USER_NOT_AVAILABLE", "This user is not available for connections.");
   }
 
   const recipient = await prisma.user.findUnique({
@@ -123,8 +129,14 @@ export async function listConnections(
   userId: string,
   query: ConnectionListQuery,
 ) {
+  const blocks = await prisma.userBlock.findMany({
+    where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+    select: { blockerId: true, blockedId: true },
+  });
+  const blockedIds = blocks.map((block) => block.blockerId === userId ? block.blockedId : block.blockerId);
   const where: Prisma.ConnectionWhereInput = {
     OR: [{ userLowId: userId }, { userHighId: userId }],
+    ...(blockedIds.length ? { NOT: [{ userLowId: userId, userHighId: { in: blockedIds } }, { userHighId: userId, userLowId: { in: blockedIds } }] } : {}),
     ...(query.status ? { status: query.status } : {}),
   };
 
@@ -166,6 +178,9 @@ export async function listConnections(
     },
   });
 
+  const acceptedTargetIds = connections.filter((connection) => connection.status === "accepted").map((connection) => connection.userLowId === userId ? connection.userHighId : connection.userLowId);
+  const mutualCounts = await getMutualConnectionCounts(userId, acceptedTargetIds);
+
   return connections.map((connection) => {
     const isLowUser = connection.userLowId === userId;
     const otherProfile = isLowUser
@@ -184,6 +199,7 @@ export async function listConnections(
         headline: otherProfile?.headline ?? null,
         location: otherProfile?.location ?? null,
         avatarUrl: otherProfile?.avatarUrl ?? null,
+        mutualConnectionCount: mutualCounts.get(isLowUser ? connection.userHighId : connection.userLowId) ?? 0,
       },
     };
   });

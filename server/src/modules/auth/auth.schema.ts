@@ -42,6 +42,11 @@ export const loginSchema = z.object({
     .max(PASSWORD_MAX_LENGTH, "Password is too long."),
 });
 
+export const accountAppealSchema = loginSchema.extend({
+  message: z.string().trim().min(20, "Please explain your appeal in at least 20 characters.").max(2000),
+});
+
 // TypeScript types created FROM the schemas, so they can never disagree.
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type AccountAppealInput = z.infer<typeof accountAppealSchema>;

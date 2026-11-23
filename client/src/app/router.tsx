@@ -5,7 +5,7 @@ import { GuestRoute } from "../features/auth/GuestRoute";
 import { OnboardedRoute } from "../features/auth/OnboardedRoute";
 import { ProtectedRoute } from "../features/auth/ProtectedRoute";
 import PublicLayout from "../layouts/PublicLayout";
-import LandingPage from "../pages/LandingPage";
+import HomePage from "../pages/HomePage";
 import DashboardPage from "../pages/DashboardPage";
 import DesignPreviewPage from "../pages/DesignPreviewPage";
 import EditProfilePage from "../pages/EditProfilePage";
@@ -20,6 +20,16 @@ import NotFoundPage from "../pages/NotFoundPage";
 import RouteErrorPage from "../pages/RouteErrorPage";
 import DiscoverPage from "../pages/DiscoverPage";
 import ConnectionsPage from "../pages/ConnectionsPage";
+import { PostsFeedPage } from "../features/posts/PostsFeedPage";
+import { MessagesPage } from "../features/messages/MessagesPage";
+import { CommunitiesPage } from "../features/communities/CommunitiesPage";
+import { JobsPage, MyJobApplicationsPage } from "../features/marketplace/JobsPage";
+import { MyProjectProposalsPage, ProjectsPage } from "../features/marketplace/ProjectsPage";
+import { AiCareerPage } from "../features/ai/AiCareerPage";
+import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
+import { CommunityGuidelinesPage } from "../pages/CommunityGuidelinesPage";
+import { SearchPage } from "../features/search/SearchPage";
+import { CallSessionPage } from "../features/calls/CallSessionPage";
 
 // Developer tools: only available while running `npm run dev`.
 const developmentOnlyRoutes: RouteObject[] = import.meta.env.DEV
@@ -35,7 +45,8 @@ export const router = createBrowserRouter([
       {
         errorElement: <RouteErrorPage />,
         children: [
-          { path: paths.home, element: <LandingPage /> },
+          { path: paths.home, element: <HomePage /> },
+          { path: paths.guidelines, element: <CommunityGuidelinesPage /> },
           ...developmentOnlyRoutes,
           { path: paths.accessDenied, element: <AccessDeniedPage /> },
           { path: paths.profilePattern, element: <ProfilePage /> },
@@ -53,9 +64,23 @@ export const router = createBrowserRouter([
               {
                 element: <OnboardedRoute />,
                 children: [
+                  { path: paths.posts, element: <PostsFeedPage /> },
                   { path: paths.dashboard, element: <DashboardPage /> },
                   { path: paths.discover, element: <DiscoverPage /> },
+                  { path: paths.search, element: <SearchPage /> },
+                  { path: paths.search, element: <SearchPage /> },
                   { path: paths.connections, element: <ConnectionsPage /> },
+                  { path: paths.messages, element: <MessagesPage /> },
+                  { path: `${paths.calls}/:callId`, element: <CallSessionPage /> },
+                  { path: paths.communities, element: <CommunitiesPage /> },
+                  { path: paths.jobApplications, element: <MyJobApplicationsPage /> },
+                  { path: `${paths.jobs}/:listingId`, element: <JobsPage /> },
+                  { path: paths.jobs, element: <JobsPage /> },
+                  { path: paths.projectProposals, element: <MyProjectProposalsPage /> },
+                  { path: `${paths.projects}/:listingId`, element: <ProjectsPage /> },
+                  { path: paths.projects, element: <ProjectsPage /> },
+                  { path: paths.aiCareer, element: <AiCareerPage /> },
+                  { path: paths.admin, element: <AdminDashboardPage /> },
                   { path: paths.myProfile, element: <MyProfilePage /> },
                   { path: paths.editProfile, element: <EditProfilePage /> },
                   {

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/requireAuth";
-import { getDiscoverProfiles } from "./discover.controller";
+import { getDiscoverProfiles, getRecommendedProfiles } from "./discover.controller";
 
 const discoverRouter = Router();
 
@@ -12,5 +12,6 @@ discoverRouter.use((_req, res, next) => {
 
 // All discovery requests require authentication.
 discoverRouter.get("/", requireAuth, getDiscoverProfiles);
+discoverRouter.get("/recommendations", requireAuth, getRecommendedProfiles);
 
 export { discoverRouter };
