@@ -34,6 +34,8 @@ export interface PostComment {
   createdAt: string;
   updatedAt: string;
   author: PostAuthor;
+  likesCount: number;
+  isLikedByViewer: boolean;
 }
 
 export interface PostsFeedResponse {

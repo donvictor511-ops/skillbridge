@@ -249,6 +249,7 @@ model User {
   notificationsSent       Notification[]            @relation("NotificationActor")
   posts                   Post[]
   postLikes               PostLike[]
+  postCommentLikes        PostCommentLike[]
   postComments            PostComment[]
   conversationsLow        Conversation[]            @relation("ConversationLowUser")
   conversationsHigh       Conversation[]            @relation("ConversationHighUser")
@@ -755,11 +756,25 @@ model PostComment {
   parent PostComment? @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
   replies PostComment[] @relation("CommentReplies")
   reports PostReport[]
+  likes PostCommentLike[]
 
   @@index([postId, createdAt])
   @@index([parentCommentId, createdAt])
   @@index([authorId])
   @@map("post_comments")
+}
+
+model PostCommentLike {
+  commentId String   @map("comment_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
+  @@index([userId])
+  @@map("post_comment_likes")
 }
 
 model PostReport {

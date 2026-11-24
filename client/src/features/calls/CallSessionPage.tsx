@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { isAxiosError } from "axios";
-import { useNavigate, useParams } from "react-router";
-import { Camera, CameraOff, ImagePlus, MessageSquare, Mic, MicOff, MonitorDown, MonitorUp, PhoneOff, Send, X } from "lucide-react";
+import { useNavigate } from "react-router";
+import { Camera, CameraOff, ImagePlus, MessageSquare, Mic, MicOff, MonitorDown, MonitorUp, Phone, PhoneOff, Send, Video, X } from "lucide-react";
 import { useCurrentUser } from "../auth/authQueries";
 import { Avatar, Card, Spinner } from "../../components/ui";
 import { apiBaseURL } from "../../services/apiClient";
@@ -13,6 +13,7 @@ import { uploadPostMedia } from "../posts/postsService";
 import { VoiceDictationButton } from "../../components/ui/VoiceDictationButton";
 import { VoiceRecordingButton } from "../../components/ui/VoiceRecordingButton";
 import { uploadCallVoice } from "./callsService";
+import { paths } from "../../app/paths";
 
 type Signal = { type?: string; sdp?: RTCSessionDescriptionInit; candidate?: RTCIceCandidateInit };
 const buttonClass = "inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20";
@@ -21,8 +22,8 @@ function callErrorMessage(problem: unknown): string {
   return problem instanceof Error ? problem.message : "Could not join the call. Allow camera and microphone access, then try again.";
 }
 
-export function CallSessionPage(): ReactElement {
-  const { callId = "" } = useParams(); const navigate = useNavigate(); const { data: user } = useCurrentUser();
+export function CallSessionPage({ callId, minimized = false, onEnd }: { callId: string; minimized?: boolean; onEnd: () => void }): ReactElement {
+  const navigate = useNavigate(); const { data: user } = useCurrentUser();
   const [room, setRoom] = useState<CallRoom | null>(null); const [error, setError] = useState(""); const [muted, setMuted] = useState(false); const [cameraOff, setCameraOff] = useState(false); const [connecting, setConnecting] = useState(true);
   const [remotes, setRemotes] = useState<Record<string, MediaStream>>({});
   const [callMessages, setCallMessages] = useState<CallMessage[]>([]); const [chatOpen, setChatOpen] = useState(false); const [chatDraft, setChatDraft] = useState(""); const [chatFile, setChatFile] = useState<File | null>(null); const [chatVoice, setChatVoice] = useState<File | null>(null); const [sharingScreen, setSharingScreen] = useState(false); const [chatError, setChatError] = useState("");
@@ -32,7 +33,7 @@ export function CallSessionPage(): ReactElement {
   useEffect(() => {
     if (localVideo.current) localVideo.current.srcObject = localStream.current;
     if (screenVideo.current) screenVideo.current.srcObject = screenStream.current;
-  }, [connecting, sharingScreen, cameraOff]);
+  }, [connecting, sharingScreen, cameraOff, minimized]);
   const makePeer = useCallback((peerId: string, current: CallRoom) => {
     const existing = peers.current.get(peerId); if (existing) return existing;
     const pc = new RTCPeerConnection({ iceServers: current.iceServers?.length ? current.iceServers : [{ urls: "stun:stun.l.google.com:19302" }] });
@@ -110,7 +111,7 @@ export function CallSessionPage(): ReactElement {
     void begin();
     return () => { closed = true; if (peerRefresh) window.clearInterval(peerRefresh); events?.close(); peerConnections.forEach((pc) => pc.close()); peerConnections.clear(); screenStream.current?.getTracks().forEach((track) => track.stop()); screenStream.current = null; localStream.current?.getTracks().forEach((track) => track.stop()); localStream.current = null; if (!left.current) { left.current = true; leaveTimer.current = window.setTimeout(() => { leaveTimer.current = null; void leaveCall(callId).catch(() => {}); }, 250); } };
   }, [callId, user?.id, makePeer, offerPeer]);
-  async function exit() { if (!left.current) { left.current = true; await leaveCall(callId).catch(() => {}); } navigate(-1); }
+  async function exit() { if (!left.current) { left.current = true; await leaveCall(callId).catch(() => {}); } onEnd(); navigate(-1); }
   function toggleMic() { const next = !muted; setMuted(next); localStream.current?.getAudioTracks().forEach((track) => { track.enabled = !next; }); }
   function toggleCamera() { const next = !cameraOff; setCameraOff(next); localStream.current?.getVideoTracks().forEach((track) => { track.enabled = !next; }); }
   async function toggleScreenShare() {
@@ -171,8 +172,12 @@ export function CallSessionPage(): ReactElement {
   async function postChat(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); if (!callId || (!chatDraft.trim() && !chatFile && !chatVoice)) return; try { const media = chatFile ? await uploadPostMedia(chatFile) : chatVoice ? await uploadCallVoice(chatVoice) : null; const sent = await sendCallMessage(callId, { content: chatDraft.trim(), ...(media ?? {}) }); setCallMessages((items) => items.some((item) => item.id === sent.id) ? items : [...items, sent]); setChatDraft(""); setChatFile(null); setChatVoice(null); setChatError(""); } catch { setChatError("Could not send this message. Please try again."); } }
   useEffect(() => { if (messageList.current) messageList.current.scrollTop = messageList.current.scrollHeight; }, [callMessages, chatOpen]);
   const remoteParticipants = room?.participants.filter((participant) => participant.userId !== user?.id && participant.status === "joined") ?? [];
-  if (connecting) return <main className="grid min-h-[70vh] place-items-center bg-navy text-white"><div className="text-center"><Spinner size="lg" label="Connecting call" /><p className="mt-4">Joining call…</p></div></main>;
-  return <main className="min-h-[calc(100dvh-3.75rem)] bg-[#101820] p-4 text-white sm:p-8"><div className="mx-auto flex max-w-6xl flex-col gap-5"><header className="flex items-center justify-between"><div><h1 className="text-xl font-semibold">{room?.kind === "community" ? room.community?.name : room?.interview?.jobTitle ?? "Voice and video call"}</h1><p className="text-sm text-white/60">{room?.mode === "audio" ? "Audio call" : "Video call"} · {Object.keys(remotes).length + 1} connected</p></div><div className="flex gap-2"><button type="button" onClick={() => setChatOpen((value) => !value)} className={buttonClass} aria-label={chatOpen ? "Close call chat" : "Open call chat"}><MessageSquare /></button><button type="button" onClick={exit} className="rounded-lg bg-red-600 px-4 py-2 font-semibold">Leave</button></div></header>
+  if (minimized) return <aside className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-3 z-[80] w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl border border-white/15 bg-[#101820] p-3 text-white shadow-2xl sm:bottom-4 sm:right-4 sm:p-4" aria-label="Ongoing call">
+    <div className="sr-only" aria-hidden="true">{Object.entries(remotes).map(([participantId, stream]) => <RemoteAudio key={participantId} stream={stream} />)}</div>
+    <div className="flex items-center gap-2"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-500/20 text-emerald-300"><Phone className="h-5 w-5" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{connecting ? "Connecting call…" : room?.kind === "community" ? room.community?.name : room?.interview?.jobTitle ?? "Voice and video call"}</p><p className="text-xs text-white/60">{muted ? "Muted" : "Microphone on"}{sharingScreen ? " · Sharing screen" : ""}</p></div><button type="button" onClick={toggleMic} aria-label={muted ? "Unmute microphone" : "Mute microphone"} title={muted ? "Unmute" : "Mute"} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 hover:bg-white/20">{muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</button>{sharingScreen ? <button type="button" onClick={() => void toggleScreenShare()} aria-label="Stop screen sharing" title="Stop screen sharing" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 hover:bg-white/20"><MonitorDown className="h-4 w-4" /></button> : null}<button type="button" onClick={() => navigate(`${paths.calls}/${callId}`)} aria-label="Return to call" title="Return to call" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 hover:bg-white/20"><Video className="h-5 w-5" /></button><button type="button" onClick={() => void exit()} aria-label="End call" title="End call" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-600 hover:bg-red-700"><PhoneOff className="h-5 w-5" /></button></div>
+  </aside>;
+  if (connecting) return <main className="fixed inset-0 z-[80] grid place-items-center bg-navy text-white"><div className="text-center"><Spinner size="lg" label="Connecting call" /><p className="mt-4">Joining call…</p></div></main>;
+  return <main className="fixed inset-0 z-[80] min-h-dvh overflow-y-auto bg-[#101820] p-4 text-white sm:p-8"><div className="mx-auto flex min-h-full max-w-6xl flex-col justify-center gap-5"><header className="flex items-center justify-between"><div><h1 className="text-xl font-semibold">{room?.kind === "community" ? room.community?.name : room?.interview?.jobTitle ?? "Voice and video call"}</h1><p className="text-sm text-white/60">{room?.mode === "audio" ? "Audio call" : "Video call"} · {Object.keys(remotes).length + 1} connected</p></div><div className="flex gap-2"><button type="button" onClick={() => setChatOpen((value) => !value)} className={buttonClass} aria-label={chatOpen ? "Close call chat" : "Open call chat"}><MessageSquare /></button><button type="button" onClick={exit} className="rounded-lg bg-red-600 px-4 py-2 font-semibold">Leave</button></div></header>
     {error ? <p role="alert" className="rounded-xl bg-red-900/50 p-4">{error}</p> : null}
     <div className={`grid gap-4 ${chatOpen ? "lg:grid-cols-[minmax(0,1fr)_22rem]" : ""}`}>
       <section className="relative min-h-[55vh] h-[calc(100dvh-15rem)] overflow-hidden rounded-2xl bg-black">
@@ -202,5 +207,10 @@ function RemoteTile({ name, avatar, stream, mode, featured = false }: { name: st
     {stream ? <video ref={video} autoPlay playsInline className="h-full w-full object-cover" aria-label={`${name}'s video`} /> : <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-900 to-[#101820] text-center"><Avatar name={name} src={avatar} size="lg" /><p className="text-sm text-white/70">Connecting to {name}…</p></div>}
     <span className="absolute bottom-3 left-3 rounded-md bg-black/60 px-2 py-1 text-xs text-white">{name}</span>
   </div>;
+}
+function RemoteAudio({ stream }: { stream: MediaStream }): ReactElement {
+  const audio = useRef<HTMLAudioElement>(null);
+  useEffect(() => { if (audio.current) audio.current.srcObject = stream; }, [stream]);
+  return <audio ref={audio} autoPlay />;
 }
 function AudioTile({ name, avatar, stream }: { name: string; avatar?: string | null; stream?: MediaStream }): ReactElement { const audio = useRef<HTMLAudioElement>(null); useEffect(() => { if (audio.current) audio.current.srcObject = stream ?? null; }, [stream]); return <Card className="flex aspect-video flex-col items-center justify-center gap-3 bg-white/10 text-white"><Avatar name={name} src={avatar} size="lg" /><span>{name}</span>{stream ? <audio ref={audio} autoPlay /> : null}</Card>; }

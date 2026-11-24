@@ -12,6 +12,7 @@ import {
   useCreateComment,
   useDeleteComment,
   useUpdateComment,
+  useToggleCommentLike,
 } from "./postsQueries";
 import { uploadPostMedia } from "./postsService";
 
@@ -62,6 +63,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
   const createMutation = useCreateComment();
   const updateMutation = useUpdateComment();
   const deleteMutation = useDeleteComment();
+  const likeMutation = useToggleCommentLike(postId);
 
   const comments = commentsQuery.data ?? [];
   const isBusy = createMutation.isPending || isUploadingMedia;
@@ -500,6 +502,13 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 )}
 
                 {!comment.parentCommentId && currentUserQuery.data?.onboardedAt ? <button type="button" onClick={() => { setReplyTarget(comment); setContent(""); }} className="mt-3 text-xs font-semibold text-blue-700 hover:underline">Reply</button> : null}
+
+                <div className="mt-2 flex items-center gap-4">
+                  <button type="button" onClick={() => likeMutation.mutate({ commentId: comment.id, liked: !comment.isLikedByViewer })} disabled={!currentUserQuery.data?.onboardedAt || likeMutation.isPending} aria-pressed={comment.isLikedByViewer} className={`inline-flex items-center gap-1 text-xs font-semibold hover:underline disabled:opacity-50 ${comment.isLikedByViewer ? "text-blue-700" : "text-slate-500"}`}>
+                    <span aria-hidden="true">👍</span>{comment.isLikedByViewer ? "Liked" : "Like"}{comment.likesCount > 0 ? ` · ${comment.likesCount}` : ""}
+                  </button>
+                  {likeMutation.isError ? <span role="alert" className="text-xs text-red-600">Could not update like.</span> : null}
+                </div>
 
                 {deleteMutation.isError && (
                   <p role="alert" className="mt-2 text-xs text-red-600">

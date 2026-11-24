@@ -116,6 +116,12 @@ export async function getComments(postId: string): Promise<PostComment[]> {
   return response.data.data;
 }
 
+export async function toggleCommentLike(postId: string, commentId: string, liked: boolean): Promise<void> {
+  const url = `/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/likes`;
+  if (liked) await apiClient.post(url);
+  else await apiClient.delete(url);
+}
+
 export async function createComment(
   postId: string,
   input: CreateCommentInput,

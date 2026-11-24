@@ -585,7 +585,25 @@ export async function listComments(viewer: AuthUser, postId: string) {
     select: commentSelect,
   });
 
-  return comments.map(formatComment);
+  const commentIds = comments.map((comment) => comment.id);
+  const [likes, viewerLikes] = commentIds.length ? await Promise.all([
+    prisma.postCommentLike.groupBy({ by: ["commentId"], where: { commentId: { in: commentIds } }, _count: { _all: true } }),
+    prisma.postCommentLike.findMany({ where: { commentId: { in: commentIds }, userId: viewer.id }, select: { commentId: true } }),
+  ]) : [[], []];
+  const counts = new Map(likes.map((row) => [row.commentId, row._count._all]));
+  const likedIds = new Set(viewerLikes.map((row) => row.commentId));
+  return comments.map((comment) => ({ ...formatComment(comment), likesCount: counts.get(comment.id) ?? 0, isLikedByViewer: likedIds.has(comment.id) }));
+}
+
+export async function toggleCommentLike(userId: string, postId: string, commentId: string, liked: boolean): Promise<void> {
+  await findAccessiblePost(postId, { id: userId });
+  const comment = await prisma.postComment.findFirst({ where: { id: commentId, postId, moderationStatus: "published" }, select: { id: true } });
+  if (!comment) throw new AppError(404, "COMMENT_NOT_FOUND", "Comment not found.");
+  if (liked) {
+    await prisma.postCommentLike.upsert({ where: { commentId_userId: { commentId, userId } }, create: { commentId, userId }, update: {} });
+  } else {
+    await prisma.postCommentLike.deleteMany({ where: { commentId, userId } });
+  }
 }
 
 export async function createComment(

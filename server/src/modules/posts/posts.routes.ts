@@ -18,6 +18,8 @@ import {
   reportPost,
   getProfilePosts,
   reactToPost,
+  likeComment,
+  unlikeComment,
 } from "./posts.controller";
 import { uploadSinglePostMedia } from "../../middleware/uploadPostMedia";
 import { uploadPostMediaController } from "./posts.media.controller";
@@ -56,6 +58,8 @@ postsRouter.delete("/:postId/reposts", requireWriteAccess, removeRepost);
 // Read and manage comments.
 postsRouter.get("/:postId/comments", getComments);
 postsRouter.post("/:postId/comments", requireWriteAccess, createComment);
+postsRouter.post("/:postId/comments/:commentId/likes", requireWriteAccess, likeComment);
+postsRouter.delete("/:postId/comments/:commentId/likes", requireWriteAccess, unlikeComment);
 postsRouter.post("/:postId/comments/:commentId/reports", reportPost);
 postsRouter.patch("/:postId/comments/:commentId", requireWriteAccess, updateComment);
 postsRouter.delete("/:postId/comments/:commentId", requireWriteAccess, deleteComment);

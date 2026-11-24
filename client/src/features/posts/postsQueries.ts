@@ -21,6 +21,7 @@ import {
   updateComment,
   updatePost,
   reactToPost,
+  toggleCommentLike,
 } from "./postsService";
 
 import type {
@@ -239,5 +240,13 @@ export function useDeleteComment() {
         queryKey: postKeys.feed(),
       });
     },
+  });
+}
+
+export function useToggleCommentLike(postId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ commentId, liked }: { commentId: string; liked: boolean }) => toggleCommentLike(postId, commentId, liked),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: postKeys.comments(postId) }),
   });
 }

@@ -29,6 +29,7 @@ import {
   reportPost as reportPostService,
   listProfilePosts as listProfilePostsService,
   reactToPost as reactToPostService,
+  toggleCommentLike as toggleCommentLikeService,
 } from "./posts.service";
 import type { AuthUser } from "../auth/auth.types";
 
@@ -148,6 +149,20 @@ export async function getComments(req: Request, res: Response): Promise<void> {
   const result = await listCommentsService(user, postId);
 
   res.status(200).json({ data: result });
+}
+
+export async function likeComment(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId, commentId } = commentParamsSchema.parse(req.params);
+  await toggleCommentLikeService(user.id, postId, commentId, true);
+  res.status(204).send();
+}
+
+export async function unlikeComment(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId, commentId } = commentParamsSchema.parse(req.params);
+  await toggleCommentLikeService(user.id, postId, commentId, false);
+  res.status(204).send();
 }
 
 export async function createComment(

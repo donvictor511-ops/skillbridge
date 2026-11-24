@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Share2, Link2, Check, Repeat2, SmilePlus, MessageCircle, MoreHorizontal } from "lucide-react";
 
@@ -59,6 +59,19 @@ export function PostCard({ post }: PostCardProps) {
   const [shareCopied, setShareCopied] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [showConnections, setShowConnections] = useState(false);
+
+  useEffect(() => {
+    function closePostPopovers(event: PointerEvent) {
+      if (event.target instanceof Element && !event.target.closest("[data-post-actions]")) {
+        setShowReactionPicker(false);
+        setShowMoreActions(false);
+        setShowShareOptions(false);
+        setShowConnections(false);
+      }
+    }
+    document.addEventListener("pointerdown", closePostPopovers);
+    return () => document.removeEventListener("pointerdown", closePostPopovers);
+  }, []);
   const [sharedWithName, setSharedWithName] = useState<string | null>(null);
   const [repostError, setRepostError] = useState<string | null>(null);
 
@@ -341,7 +354,7 @@ export function PostCard({ post }: PostCardProps) {
           </span>
         </div>
 
-        <div className="mt-3 grid grid-cols-4 items-center gap-1 border-t border-slate-100 pt-2 sm:flex sm:gap-3 sm:pt-3">
+        <div data-post-actions className="mt-3 grid grid-cols-4 items-center gap-1 border-t border-slate-100 pt-2 sm:flex sm:gap-3 sm:pt-3">
           <button
             type="button"
             onClick={handleLike}

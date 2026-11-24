@@ -31,7 +31,6 @@ import { AiCareerPage } from "../features/ai/AiCareerPage";
 import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
 import { CommunityGuidelinesPage } from "../pages/CommunityGuidelinesPage";
 import { SearchPage } from "../features/search/SearchPage";
-import { CallSessionPage } from "../features/calls/CallSessionPage";
 
 // Developer tools: only available while running `npm run dev`.
 const developmentOnlyRoutes: RouteObject[] = import.meta.env.DEV
@@ -75,7 +74,7 @@ export const router = createBrowserRouter([
                   { path: paths.search, element: <SearchPage /> },
                   { path: paths.connections, element: <ConnectionsPage /> },
                   { path: paths.messages, element: <MessagesPage /> },
-                  { path: `${paths.calls}/:callId`, element: <CallSessionPage /> },
+                  { path: `${paths.calls}/:callId`, element: <div aria-hidden="true" /> },
                   { path: paths.communities, element: <CommunitiesPage /> },
                   { path: paths.jobApplications, element: <MyJobApplicationsPage /> },
                   { path: `${paths.jobs}/:listingId`, element: <JobsPage /> },
