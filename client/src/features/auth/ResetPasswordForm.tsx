@@ -7,11 +7,13 @@ import { getApiErrorInfo } from "../../lib/apiError";
 import { completePasswordReset } from "../../services/authService";
 import { PASSWORD_MIN_LENGTH, resetPasswordFormSchema } from "./authSchemas";
 import { PasswordField } from "./PasswordField";
+import { suggestStrongPassword } from "./passwordGenerator";
 
 export function ResetPasswordForm(): ReactElement {
   const [searchParams] = useSearchParams();
   const [token] = useState(() => searchParams.get("token") ?? "");
   const [password, setPassword] = useState("");
+  const [passwordSuggested, setPasswordSuggested] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -78,8 +80,28 @@ export function ResetPasswordForm(): ReactElement {
         required
         hint={`Use at least ${PASSWORD_MIN_LENGTH} characters.`}
         value={password}
-        onChange={(event) => setPassword(event.target.value)}
+        onChange={(event) => {
+          setPassword(event.target.value);
+          setPasswordSuggested(false);
+        }}
       />
+      <div className="-mt-3 flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setPassword(suggestStrongPassword());
+            setPasswordSuggested(true);
+          }}
+          className="rounded-control text-sm font-semibold text-brand underline-offset-4 hover:underline"
+        >
+          Suggest a strong password
+        </button>
+        <span aria-live="polite" className="text-xs text-muted">
+          {passwordSuggested
+            ? "Suggested password filled. Use the eye icon to view or copy it."
+            : "Your browser can save it for you"}
+        </span>
+      </div>
       <Button type="submit" fullWidth loading={isSaving}>
         {isSaving ? "Updating password..." : "Save new password"}
       </Button>

@@ -4,6 +4,7 @@ import { Button, ErrorMessage, Input } from "../../components/ui";
 import { getApiErrorInfo } from "../../lib/apiError";
 import { focusFirstInvalidField } from "../../lib/forms";
 import { useRegister } from "./authQueries";
+import { suggestStrongPassword } from "./passwordGenerator";
 import {
   PASSWORD_MIN_LENGTH,
   registerFormSchema,
@@ -20,6 +21,7 @@ export function RegisterForm(): ReactElement {
 
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [passwordSuggested, setPasswordSuggested] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -100,10 +102,30 @@ export function RegisterForm(): ReactElement {
         value={password}
         onChange={(event) => {
           setPassword(event.target.value);
+          setPasswordSuggested(false);
           clearFieldError("password");
         }}
         error={fieldErrors.password}
       />
+
+      <div className="-mt-3 flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setPassword(suggestStrongPassword());
+            setPasswordSuggested(true);
+            clearFieldError("password");
+          }}
+          className="rounded-control text-sm font-semibold text-brand underline-offset-4 hover:underline"
+        >
+          Suggest a strong password
+        </button>
+        <span aria-live="polite" className="text-xs text-muted">
+          {passwordSuggested
+            ? "Suggested password filled. Use the eye icon to view or copy it."
+            : "Your browser can save it for you"}
+        </span>
+      </div>
 
       <div className="space-y-2" aria-live="polite">
         <div

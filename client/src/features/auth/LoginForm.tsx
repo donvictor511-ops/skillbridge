@@ -105,6 +105,9 @@ export function LoginForm(): ReactElement {
         }}
         error={fieldErrors.password}
       />
+      <p className="-mt-3 text-xs text-muted">
+        Your browser may offer to remember your password after you log in.
+      </p>
 
       <div className="-mt-2 flex justify-end">
         <Link to={paths.forgotPassword} className="rounded-control text-sm font-semibold text-brand underline-offset-4 hover:underline">

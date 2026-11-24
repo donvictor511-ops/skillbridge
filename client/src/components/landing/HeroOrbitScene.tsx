@@ -17,7 +17,25 @@ export function HeroOrbitScene(): ReactElement {
       <div className="absolute left-[17%] top-[11%] h-48 w-48 rounded-full bg-[#bdd8ff]/50 blur-3xl" />
       <div className="absolute bottom-[4%] right-[9%] h-52 w-52 rounded-full bg-[#bcece0]/60 blur-3xl" />
 
-      <div className="hero-person-frame absolute inset-x-[8%] bottom-0 top-[2%] overflow-hidden">
+      <svg className="pointer-events-none absolute inset-0 z-[1] h-full w-full" viewBox="0 0 620 560" fill="none" aria-hidden="true">
+        <defs>
+          <mask id="hero-orbit-wrap-mask">
+            <rect width="620" height="560" fill="white" />
+            <rect x="140" y="130" width="340" height="370" rx="24" fill="black" />
+          </mask>
+        </defs>
+        <ellipse
+          cx="310"
+          cy="334"
+          rx="278"
+          ry="104"
+          stroke="#2563EB"
+          strokeWidth="2.5"
+          strokeDasharray="11 12"
+        />
+      </svg>
+
+      <div className="hero-person-frame absolute inset-x-[8%] bottom-0 top-[2%] z-[2] overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1758273237776-28868e82eb36?auto=format&fit=crop&crop=faces&fm=jpg&q=82&w=1200"
           alt="A professional woman smiling as she checks her phone outdoors"
@@ -27,16 +45,16 @@ export function HeroOrbitScene(): ReactElement {
         />
       </div>
 
-      <svg className="pointer-events-none absolute inset-0 z-[2] h-full w-full" viewBox="0 0 620 560" fill="none">
+      <svg className="pointer-events-none absolute inset-0 z-[3] h-full w-full" viewBox="0 0 620 560" fill="none" aria-hidden="true">
         <ellipse
           cx="310"
-          cy="309"
-          rx="264"
-          ry="119"
-          transform="rotate(-11 310 309)"
+          cy="334"
+          rx="278"
+          ry="104"
           stroke="#2563EB"
           strokeWidth="2.5"
           strokeDasharray="11 12"
+          mask="url(#hero-orbit-wrap-mask)"
         />
       </svg>
 

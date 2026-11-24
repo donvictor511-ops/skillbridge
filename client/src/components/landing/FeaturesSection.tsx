@@ -62,8 +62,8 @@ export function FeaturesSection(): ReactElement {
 
       <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {features.map(({ icon: Icon, title, description }) => (
-          <Card key={title} padding="lg">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/15 text-navy">
+          <Card key={title} padding="lg" className="group transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_42px_-24px_rgba(20,33,61,0.38)]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/15 text-navy transition duration-300 group-hover:scale-110 group-hover:bg-brand/10 group-hover:text-brand">
               <Icon className="h-6 w-6" aria-hidden="true" />
             </span>
             <h3 className="mt-4 text-lg font-semibold text-navy">{title}</h3>

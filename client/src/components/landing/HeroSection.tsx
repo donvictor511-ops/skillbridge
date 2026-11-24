@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -5,7 +6,27 @@ import { paths } from "../../app/paths";
 import { Badge, getButtonClasses } from "../ui";
 import { HeroOrbitScene } from "./HeroOrbitScene";
 
+const rotatingPhrases = [
+  "Find meaningful work.",
+  "Get hired for your skills.",
+  "Find your next project.",
+  "Collaborate with great people.",
+  "Grow your professional network.",
+];
+
 export function HeroSection(): ReactElement {
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const intervalId = window.setInterval(() => {
+      setPhraseIndex((current) => (current + 1) % rotatingPhrases.length);
+    }, 2800);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   return (
     <section
       aria-labelledby="hero-heading"
@@ -26,12 +47,17 @@ export function HeroSection(): ReactElement {
             id="hero-heading"
             className="mt-6 text-4xl font-bold tracking-tight text-navy sm:text-5xl lg:text-6xl lg:leading-[1.08]"
           >
-            Good work deserves to be <span className="text-brand">seen.</span>
+            Your next move starts here.
+            <span className="mt-2 block min-h-[1.16em] text-brand">
+              <span key={phraseIndex} className="hero-rotating-phrase inline-block">
+                {rotatingPhrases[phraseIndex]}
+              </span>
+            </span>
           </h1>
 
           <p className="mt-5 max-w-xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
             Turn your skills into a story people can trust. Showcase real projects,
-            find opportunities, and build meaningful professional connections—all
+            discover jobs and collaborations, and grow with a professional community—all
             in one place.
           </p>
 
