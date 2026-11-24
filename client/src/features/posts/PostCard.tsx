@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Share2, Link2, Check, Repeat2, SmilePlus } from "lucide-react";
+import { Share2, Link2, Check, Repeat2, SmilePlus, MessageCircle, MoreHorizontal } from "lucide-react";
 
 import { paths, profilePath } from "../../app/paths";
 import { Avatar } from "../../components/ui/Avatar";
@@ -54,6 +54,7 @@ export function PostCard({ post }: PostCardProps) {
   const [editContent, setEditContent] = useState(post.content);
   const [showComments, setShowComments] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -340,13 +341,13 @@ export function PostCard({ post }: PostCardProps) {
           </span>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-1 border-t border-slate-100 pt-3 sm:flex sm:items-center sm:gap-3">
+        <div className="mt-3 grid grid-cols-4 items-center gap-1 border-t border-slate-100 pt-2 sm:flex sm:gap-3 sm:pt-3">
           <button
             type="button"
             onClick={handleLike}
             disabled={isLikePending}
             aria-pressed={post.isLikedByViewer}
-            className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold transition disabled:opacity-50 sm:px-3 ${
+            className={`flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-xs font-semibold transition disabled:opacity-50 sm:gap-2 sm:px-3 sm:text-sm ${
                 post.viewerReaction
                 ? "bg-blue-50 text-blue-700"
                 : "text-slate-600 hover:bg-slate-100"
@@ -356,7 +357,7 @@ export function PostCard({ post }: PostCardProps) {
             {post.viewerReaction ? reactionOptions.find(({ key }) => key === post.viewerReaction)?.label : "Like"}
           </button>
 
-          <div className="relative min-w-0">
+          <div className="relative hidden min-w-0 sm:block">
             <button type="button" onClick={() => setShowReactionPicker((open) => !open)} aria-label="Choose a reaction" aria-expanded={showReactionPicker} disabled={isLikePending} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"><SmilePlus className="h-4 w-4" />React</button>
             {showReactionPicker ? <div role="group" aria-label="Post reactions" className="absolute bottom-full left-0 z-30 mb-2 flex gap-1 rounded-full border border-line bg-surface p-2 shadow-card">{reactionOptions.map(({ key, emoji, label }) => <button key={key} type="button" title={label} aria-label={label} onClick={() => void handleReaction(key)} disabled={isLikePending} className={`grid h-10 w-10 place-items-center rounded-full text-xl transition hover:-translate-y-1 hover:bg-brand/10 disabled:opacity-50 ${post.viewerReaction === key ? "bg-brand/10" : ""}`}>{emoji}</button>)}</div> : null}
           </div>
@@ -366,7 +367,7 @@ export function PostCard({ post }: PostCardProps) {
             onClick={() => void handleRepost()}
             disabled={repostMutation.isPending || undoRepostMutation.isPending || (isOwner && !post.repostOf)}
             aria-pressed={post.isRepostedByViewer}
-            className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold transition disabled:opacity-50 sm:px-3 ${post.isRepostedByViewer ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`hidden min-w-0 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold transition disabled:opacity-50 sm:flex sm:px-3 ${post.isRepostedByViewer ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-100"}`}
           >
             <Repeat2 className="h-4 w-4" aria-hidden="true" />
             {repostMutation.isPending ? "Reposting…" : undoRepostMutation.isPending ? "Undoing…" : post.isRepostedByViewer ? "Reposted" : "Repost"}
@@ -376,13 +377,15 @@ export function PostCard({ post }: PostCardProps) {
             type="button"
             onClick={() => setShowComments((current) => !current)}
             aria-expanded={showComments}
-            className="min-w-0 rounded-lg px-2 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 sm:px-3"
+            className="flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 sm:gap-2 sm:px-3 sm:text-sm"
           >
-            {showComments ? "Hide comments" : "Comments"}
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            <span className="sm:hidden">{showComments ? "Hide" : "Comment"}</span>
+            <span className="hidden sm:inline">{showComments ? "Hide comments" : "Comments"}</span>
           </button>
 
           <div className="relative min-w-0 sm:ml-auto">
-            <button type="button" onClick={() => setShowShareOptions((value) => !value)} aria-expanded={showShareOptions} aria-haspopup="true" className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 sm:w-auto sm:px-3">
+            <button type="button" onClick={() => setShowShareOptions((value) => !value)} aria-expanded={showShareOptions} aria-haspopup="true" className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 sm:w-auto sm:gap-2 sm:px-3 sm:text-sm">
               <Share2 className="h-4 w-4" aria-hidden="true" /> Share
             </button>
             {showShareOptions && (
@@ -412,6 +415,16 @@ export function PostCard({ post }: PostCardProps) {
                 {shareError && <p role="alert" className="px-3 py-2 text-xs text-danger-strong">{shareError}</p>}
               </div>
             )}
+          </div>
+          <div className="relative min-w-0 sm:hidden">
+            <button type="button" onClick={() => setShowMoreActions((value) => !value)} aria-label="More post actions" aria-expanded={showMoreActions} className="inline-flex w-full items-center justify-center gap-1 rounded-lg px-1 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+              <MoreHorizontal className="h-4 w-4" aria-hidden="true" />More
+            </button>
+            {showMoreActions ? <div className="absolute bottom-full right-0 z-30 mb-2 w-56 rounded-xl border border-line bg-surface p-2 shadow-card">
+              <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted">React to post</p>
+              <div className="flex justify-around py-1">{reactionOptions.map(({ key, emoji, label }) => <button key={key} type="button" title={label} aria-label={label} onClick={() => { void handleReaction(key); setShowMoreActions(false); }} disabled={isLikePending} className={`grid h-9 w-9 place-items-center rounded-full text-xl hover:bg-brand/10 disabled:opacity-50 ${post.viewerReaction === key ? "bg-brand/10" : ""}`}>{emoji}</button>)}</div>
+              <button type="button" onClick={() => { void handleRepost(); setShowMoreActions(false); }} disabled={repostMutation.isPending || undoRepostMutation.isPending || (isOwner && !post.repostOf)} aria-pressed={post.isRepostedByViewer} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-ink hover:bg-page disabled:opacity-50"><Repeat2 className="h-4 w-4" />{post.isRepostedByViewer ? "Undo repost" : "Repost"}</button>
+            </div> : null}
           </div>
         </div>
 
