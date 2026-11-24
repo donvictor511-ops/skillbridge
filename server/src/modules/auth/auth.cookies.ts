@@ -1,11 +1,11 @@
-import type { CookieOptions, Request, Response } from "express";
+  import type { CookieOptions, Request, Response } from "express";
 import { env } from "../../config/env";
 import { SESSION_COOKIE_NAME } from "./session.service";
 
 const baseCookieOptions: CookieOptions = {
   httpOnly: true, // JavaScript in the page cannot read this cookie
   // The production UI (Vercel) and API (Render) are on different sites.
-  // Lax prevents the browser from sending the session cookie on API fetches.
+  // Production fetches need this cookie; Lax prevents cross-site API requests.
   sameSite: env.nodeEnv === "production" ? "none" : "lax",
   secure: env.nodeEnv === "production", // HTTPS only in production
   path: "/",

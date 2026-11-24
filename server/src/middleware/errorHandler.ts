@@ -26,7 +26,7 @@ function getBodyParserErrorType(error: unknown): string | null {
   return null;
 }
 
-function logUnexpectedError(error: unknown): void {
+function logUnexpectedError(error: unknown, requestPath: string): void {
   if (env.nodeEnv === "test") {
     return;
   }
@@ -37,7 +37,29 @@ function logUnexpectedError(error: unknown): void {
   }
 
   const name = error instanceof Error ? error.name : "UnknownError";
-  console.error(`Unexpected error: ${name}`);
+  const details: Record<string, unknown> = { name, path: requestPath };
+
+  // Log only safe database identifiers. Never log the full error, SQL,
+  // request body, or credentials.
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const code = error.code;
+    if (typeof code === "string" && /^P\d{4}$/.test(code)) {
+      details.code = code;
+      if ("meta" in error && typeof error.meta === "object" && error.meta !== null) {
+        const meta = error.meta;
+        if ("modelName" in meta && typeof meta.modelName === "string") {
+          details.model = meta.modelName;
+        }
+        if ("column_name" in meta && typeof meta.column_name === "string") {
+          details.column = meta.column_name;
+        } else if ("column" in meta && typeof meta.column === "string") {
+          details.column = meta.column;
+        }
+      }
+    }
+  }
+
+  console.error("Unexpected error:", JSON.stringify(details));
 }
 
 function sendError(
@@ -135,7 +157,7 @@ export function errorHandler(
   }
 
   // 5. Unexpected errors
-  logUnexpectedError(err);
+  logUnexpectedError(err, req.path);
 
   sendError(res, 500, {
     error: {
