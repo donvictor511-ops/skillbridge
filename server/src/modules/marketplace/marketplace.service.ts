@@ -87,7 +87,6 @@ export async function getJob(user: AuthUser, listingId: string) {
 }
 
 export async function createJob(user: AuthUser, input: Omit<Prisma.JobListingUncheckedCreateInput, "ownerId">) {
-  requireCapability(user, "client");
   const row = await prisma.jobListing.create({ data: { ...input, ownerId: user.id }, select: { id: true } });
   return getJob(user, row.id);
 }
@@ -211,7 +210,6 @@ export async function getProject(user: AuthUser, listingId: string) {
 }
 
 export async function createProject(user: AuthUser, input: Omit<Prisma.ProjectListingUncheckedCreateInput, "ownerId">) {
-  requireCapability(user, "client");
   const row = await prisma.projectListing.create({ data: { ...input, ownerId: user.id }, select: { id: true } });
   return getProject(user, row.id);
 }

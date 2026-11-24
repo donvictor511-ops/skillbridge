@@ -376,7 +376,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
           const isEditing = editingCommentId === comment.id;
 
           return (
-            <article key={comment.id} className={`flex items-start gap-3 ${comment.parentCommentId ? "ml-8 border-l-2 border-blue-100 pl-3" : ""}`}>
+            <article key={comment.id} className={`flex min-w-0 items-start gap-2 sm:gap-3 ${comment.parentCommentId ? "ml-4 border-l-2 border-blue-100 pl-2 sm:ml-8 sm:pl-3" : ""}`}>
               <Link
                 to={profilePath(comment.author.userId)}
                 aria-label={`View ${comment.author.displayName}'s profile`}
@@ -390,17 +390,17 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
               <div className="min-w-0 flex-1 rounded-xl bg-slate-50 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <Link
                       to={profilePath(comment.author.userId)}
-                      className="text-sm font-semibold text-slate-900 hover:text-blue-700"
+                      className="break-words text-sm font-semibold text-slate-900 hover:text-blue-700"
                     >
                       {comment.author.displayName}
                     </Link>
 
                     <time
                       dateTime={comment.createdAt}
-                      className="ml-2 text-xs text-slate-500"
+                      className="mt-0.5 block text-xs text-slate-500 sm:ml-2 sm:mt-0 sm:inline"
                     >
                       {formatCommentDate(comment.createdAt)}
                       {comment.updatedAt !== comment.createdAt && " · Edited"}

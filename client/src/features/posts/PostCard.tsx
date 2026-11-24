@@ -340,13 +340,13 @@ export function PostCard({ post }: PostCardProps) {
           </span>
         </div>
 
-        <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-3">
+        <div className="mt-3 grid grid-cols-2 gap-1 border-t border-slate-100 pt-3 sm:flex sm:items-center sm:gap-3">
           <button
             type="button"
             onClick={handleLike}
             disabled={isLikePending}
             aria-pressed={post.isLikedByViewer}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 ${
+            className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold transition disabled:opacity-50 sm:px-3 ${
                 post.viewerReaction
                 ? "bg-blue-50 text-blue-700"
                 : "text-slate-600 hover:bg-slate-100"
@@ -356,7 +356,7 @@ export function PostCard({ post }: PostCardProps) {
             {post.viewerReaction ? reactionOptions.find(({ key }) => key === post.viewerReaction)?.label : "Like"}
           </button>
 
-          <div className="relative">
+          <div className="relative min-w-0">
             <button type="button" onClick={() => setShowReactionPicker((open) => !open)} aria-label="Choose a reaction" aria-expanded={showReactionPicker} disabled={isLikePending} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"><SmilePlus className="h-4 w-4" />React</button>
             {showReactionPicker ? <div role="group" aria-label="Post reactions" className="absolute bottom-full left-0 z-30 mb-2 flex gap-1 rounded-full border border-line bg-surface p-2 shadow-card">{reactionOptions.map(({ key, emoji, label }) => <button key={key} type="button" title={label} aria-label={label} onClick={() => void handleReaction(key)} disabled={isLikePending} className={`grid h-10 w-10 place-items-center rounded-full text-xl transition hover:-translate-y-1 hover:bg-brand/10 disabled:opacity-50 ${post.viewerReaction === key ? "bg-brand/10" : ""}`}>{emoji}</button>)}</div> : null}
           </div>
@@ -366,7 +366,7 @@ export function PostCard({ post }: PostCardProps) {
             onClick={() => void handleRepost()}
             disabled={repostMutation.isPending || undoRepostMutation.isPending || (isOwner && !post.repostOf)}
             aria-pressed={post.isRepostedByViewer}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 ${post.isRepostedByViewer ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold transition disabled:opacity-50 sm:px-3 ${post.isRepostedByViewer ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-100"}`}
           >
             <Repeat2 className="h-4 w-4" aria-hidden="true" />
             {repostMutation.isPending ? "Reposting…" : undoRepostMutation.isPending ? "Undoing…" : post.isRepostedByViewer ? "Reposted" : "Repost"}
@@ -376,13 +376,13 @@ export function PostCard({ post }: PostCardProps) {
             type="button"
             onClick={() => setShowComments((current) => !current)}
             aria-expanded={showComments}
-            className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            className="min-w-0 rounded-lg px-2 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 sm:px-3"
           >
             {showComments ? "Hide comments" : "Comments"}
           </button>
 
-          <div className="relative ml-auto">
-            <button type="button" onClick={() => setShowShareOptions((value) => !value)} aria-expanded={showShareOptions} aria-haspopup="true" className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+          <div className="relative min-w-0 sm:ml-auto">
+            <button type="button" onClick={() => setShowShareOptions((value) => !value)} aria-expanded={showShareOptions} aria-haspopup="true" className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 sm:w-auto sm:px-3">
               <Share2 className="h-4 w-4" aria-hidden="true" /> Share
             </button>
             {showShareOptions && (
