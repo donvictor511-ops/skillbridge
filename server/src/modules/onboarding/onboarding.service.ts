@@ -28,17 +28,20 @@ export async function completeOnboarding(
       );
     }
 
-    await tx.profile.create({
+    const profile = await tx.profile.create({
       data: {
         userId,
         displayName: input.displayName,
         headline: input.headline,
         location: input.location,
+        avatarUrl: input.avatarUrl ?? null,
         interests: input.interests,
         goals: input.goals,
       },
+      select: { id: true },
     });
 
+    const skillIdsByKey = new Map<string, string>();
     for (const skill of skills) {
       // Find the skill by its lowercase key, or create it. Skills are shared:
       // two people typing "React" end up pointing at the SAME skill row.
@@ -50,6 +53,23 @@ export async function completeOnboarding(
       });
 
       await tx.userSkill.create({ data: { userId, skillId: saved.id } });
+      skillIdsByKey.set(skill.nameKey, saved.id);
+    }
+
+    if (input.project) {
+      const projectSkillIds = uniqueSkills(input.project.skills)
+        .map((skill) => skillIdsByKey.get(skill.nameKey))
+        .filter((id): id is string => id !== undefined);
+
+      await tx.portfolioProject.create({
+        data: {
+          profileId: profile.id,
+          title: input.project.title,
+          description: input.project.description,
+          projectUrl: input.project.projectUrl,
+          skills: { create: projectSkillIds.map((skillId) => ({ skillId })) },
+        },
+      });
     }
 
     return tx.user.findUniqueOrThrow({

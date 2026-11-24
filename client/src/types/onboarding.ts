@@ -9,4 +9,11 @@ export interface OnboardingInput {
   skills: string[];
   interests: string[];
   goals: string[];
+  avatarUrl?: string;
+  project?: {
+    title: string;
+    description: string;
+    projectUrl?: string | null;
+    skills: string[];
+  };
 }

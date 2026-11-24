@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { skillNameSchema } from "../skills/skill.schema";
+import { isSafeHttpsUrl } from "../../utils/url";
 import {
   CAPABILITIES,
   GOALS,
@@ -56,6 +57,19 @@ export const onboardingSchema = z.object({
     .array(z.enum(GOALS, "Choose valid goals."))
     .min(1, "Choose at least one goal.")
     .transform(unique),
+  avatarUrl: z.string().trim().max(2048).refine(isSafeHttpsUrl, "Profile photo link must use HTTPS.").optional(),
+  project: z.object({
+    title: z.string().trim().min(1, "Project title is required.").max(100),
+    description: z.string().trim().min(1, "Project description is required.").max(2000),
+    projectUrl: z.string().trim().max(2048).refine((value) => value === "" || isSafeHttpsUrl(value), "Project link must use HTTPS.").optional().transform((value) => value || null),
+    skills: z.array(skillNameSchema).max(10).transform(unique),
+  }).optional(),
+}).superRefine((value, context) => {
+  if (!value.project) return;
+  const selectedSkills = new Set(value.skills.map((skill) => skill.toLowerCase()));
+  if (value.project.skills.some((skill) => !selectedSkills.has(skill.toLowerCase()))) {
+    context.addIssue({ code: "custom", path: ["project", "skills"], message: "Project skills must come from your profile skills." });
+  }
 });
 
 // The type AFTER validation and cleaning (trimmed, deduplicated, empty -> null).

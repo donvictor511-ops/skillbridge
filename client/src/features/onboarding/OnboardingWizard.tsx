@@ -6,6 +6,7 @@ import { Button, Card, ErrorMessage } from "../../components/ui";
 import { getApiErrorInfo } from "../../lib/apiError";
 import { focusFirstInvalidField } from "../../lib/forms";
 import { toFieldErrors } from "../../lib/zodErrors";
+import { uploadProfileImage } from "../../services/profileService";
 import type { OnboardingInput } from "../../types/onboarding";
 import { authKeys } from "../auth/authQueries";
 import { AboutYouStep } from "./AboutYouStep";
@@ -15,8 +16,11 @@ import {
   aboutYouSchema,
   accountTypeSchema,
   preferencesSchema,
+  showcaseSchema,
 } from "./onboardingSchemas";
+import type { ShowcaseDraft } from "./onboardingSchemas";
 import { SkillsGoalsStep } from "./SkillsGoalsStep";
+import { ShowcaseStep } from "./ShowcaseStep";
 import { StepIndicator } from "./StepIndicator";
 
 interface StepConfig {
@@ -46,6 +50,12 @@ const STEPS: readonly StepConfig[] = [
     schema: preferencesSchema,
     fields: ["skills", "interests", "goals"],
   },
+  {
+    title: "Showcase your work",
+    description: "Add a profile photo and project so people can see what you do.",
+    schema: showcaseSchema,
+    fields: ["projectTitle", "projectDescription", "projectUrl", "projectSkills"],
+  },
 ];
 
 const LAST_STEP = STEPS.length - 1;
@@ -58,6 +68,13 @@ const initialValues: OnboardingInput = {
   skills: [],
   interests: [],
   goals: [],
+};
+
+const initialShowcaseDraft: ShowcaseDraft = {
+  projectTitle: "",
+  projectDescription: "",
+  projectUrl: "",
+  projectSkills: [],
 };
 
 // The server reports array problems like "skills.2". We only need "skills".
@@ -84,6 +101,10 @@ export function OnboardingWizard(): ReactElement {
   const [values, setValues] = useState<OnboardingInput>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [showcaseDraft, setShowcaseDraft] = useState<ShowcaseDraft>(initialShowcaseDraft);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   // When the step changes, move focus to its heading so screen reader and
   // keyboard users know where they are.
@@ -107,13 +128,65 @@ export function OnboardingWizard(): ReactElement {
     });
   }
 
+  function updateShowcaseDraft(patch: Partial<ShowcaseDraft>): void {
+    setShowcaseDraft((previous) => ({ ...previous, ...patch }));
+    setErrors((previous) => {
+      const next = { ...previous };
+      for (const key of Object.keys(patch)) delete next[key];
+      return next;
+    });
+  }
+
+  function selectAvatar(file: File | null): void {
+    setPhotoError(null);
+    if (file && !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setAvatarFile(null);
+      setPhotoError("Choose a JPEG, PNG, or WebP photo.");
+      return;
+    }
+    if (file && file.size > 5 * 1024 * 1024) {
+      setAvatarFile(null);
+      setPhotoError("Your photo must be 5 MB or smaller.");
+      return;
+    }
+    setAvatarFile(file);
+  }
+
   function goBack(): void {
     setFormError(null);
     setStep((previous) => Math.max(0, previous - 1));
   }
 
-  function submitToServer(): void {
-    completeMutation.mutate(values, {
+  async function submitToServer(includeShowcase = true): Promise<void> {
+    setFormError(null);
+    let avatarUrl: string | undefined;
+    if (includeShowcase && avatarFile) {
+      setIsUploadingPhoto(true);
+      try {
+        avatarUrl = (await uploadProfileImage("avatar", avatarFile)).imageUrl;
+      } catch (error: unknown) {
+        setPhotoError(getApiErrorInfo(error).message);
+        setIsUploadingPhoto(false);
+        return;
+      }
+      setIsUploadingPhoto(false);
+    }
+
+    const hasProject = includeShowcase && Boolean(showcaseDraft.projectTitle.trim() && showcaseDraft.projectDescription.trim());
+    const input: OnboardingInput = {
+      ...values,
+      ...(avatarUrl ? { avatarUrl } : {}),
+      ...(hasProject ? {
+        project: {
+          title: showcaseDraft.projectTitle.trim(),
+          description: showcaseDraft.projectDescription.trim(),
+          projectUrl: showcaseDraft.projectUrl.trim() || null,
+          skills: showcaseDraft.projectSkills,
+        },
+      } : {}),
+    };
+
+    completeMutation.mutate(input, {
       onError: (error: unknown) => {
         const info = getApiErrorInfo(error);
         const topLevel = toTopLevelErrors(info.fieldErrors);
@@ -143,7 +216,9 @@ export function OnboardingWizard(): ReactElement {
     setFormError(null);
 
     // Quick checks for THIS step only.
-    const result = currentStep.schema.safeParse(values);
+    const result = step === LAST_STEP
+      ? showcaseSchema.safeParse(showcaseDraft)
+      : currentStep.schema.safeParse(values);
 
     if (!result.success) {
       const stepErrors = toFieldErrors(result.error);
@@ -159,10 +234,10 @@ export function OnboardingWizard(): ReactElement {
       return;
     }
 
-    submitToServer();
+    void submitToServer();
   }
 
-  const isSaving = completeMutation.isPending;
+  const isSaving = completeMutation.isPending || isUploadingPhoto;
 
   return (
     <div>
@@ -215,6 +290,17 @@ export function OnboardingWizard(): ReactElement {
               onChange={updateValues}
             />
           ) : null}
+          {step === 3 ? (
+            <ShowcaseStep
+              values={values}
+              draft={showcaseDraft}
+              avatarFile={avatarFile}
+              errors={errors}
+              photoError={photoError}
+              onDraftChange={updateShowcaseDraft}
+              onPhotoSelect={selectAvatar}
+            />
+          ) : null}
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             {step > 0 ? (
@@ -224,8 +310,13 @@ export function OnboardingWizard(): ReactElement {
             ) : (
               <span />
             )}
+            {isLastStep ? (
+              <Button variant="secondary" disabled={isSaving} onClick={() => void submitToServer(false)}>
+                Skip for now
+              </Button>
+            ) : null}
             <Button type="submit" loading={isSaving}>
-              {isLastStep ? (isSaving ? "Saving..." : "Finish") : "Next"}
+              {isLastStep ? (isUploadingPhoto ? "Uploading photo..." : isSaving ? "Saving..." : "Finish setup") : "Next"}
             </Button>
           </div>
         </form>
