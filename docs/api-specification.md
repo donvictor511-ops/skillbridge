@@ -22,7 +22,7 @@ Public. Creates an account.
 Request body:
 
 - `email` (string, required): trimmed, lowercased, valid, up to 254 characters
-- `password` (string, required): 12 to 128 characters, not a very common password
+- `password` (string, required): 8 to 128 characters, not a very common password
 
 Responses:
 
@@ -40,9 +40,23 @@ The response never contains the password or its hash.
 Public. Body: `email`, `password`. Starts a session.
 
 - 200: `{ "data": { "user": { "id", "email", "createdAt" } } }` and a
-  `Set-Cookie: sb_session=...` (HttpOnly, SameSite=Lax, 7 days)
+  `Set-Cookie: sb_session=...` (HttpOnly, 7 days; Secure and SameSite=None in
+  production for the Vercel-to-Render request, Lax locally)
 - 400 `VALIDATION_ERROR`
 - 401 `INVALID_CREDENTIALS`: same message for wrong email and wrong password
+
+## POST /auth/password-reset/request
+
+Public. Body: `email`. Sends a one-time password reset link when an account exists
+for the address. The response is the same for existing and unknown addresses.
+Links expire after 30 minutes. Requires `RESEND_API_KEY` and `RESEND_FROM_EMAIL`
+on the API service.
+
+## POST /auth/password-reset/complete
+
+Public. Body: `token`, `password`. The token can be used once. On success, updates
+the password and ends all existing sessions. Passwords must be 8 to 128
+characters and not a very common password.
 
 ## POST /auth/logout
 

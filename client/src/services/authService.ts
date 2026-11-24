@@ -47,3 +47,11 @@ export async function register(credentials: Credentials): Promise<AuthUser> {
 export async function logout(): Promise<void> {
   await apiClient.post("/auth/logout");
 }
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  await apiClient.post("/auth/password-reset/request", { email });
+}
+
+export async function completePasswordReset(input: { token: string; password: string }): Promise<void> {
+  await apiClient.post("/auth/password-reset/complete", input);
+}

@@ -76,6 +76,7 @@ export function RegisterForm(): ReactElement {
         name="email"
         type="email"
         label="Email"
+        placeholder="you@example.com"
         autoComplete="email"
         inputMode="email"
         autoCapitalize="none"
@@ -104,11 +105,26 @@ export function RegisterForm(): ReactElement {
         error={fieldErrors.password}
       />
 
-      <p id="register-password-length" className="text-sm" aria-live="polite">
-        {password.length < PASSWORD_MIN_LENGTH
-          ? `${PASSWORD_MIN_LENGTH - password.length} more characters needed`
-          : "Long enough"}
-      </p>
+      <div className="space-y-2" aria-live="polite">
+        <div
+          role="progressbar"
+          aria-label="Password length"
+          aria-valuemin={0}
+          aria-valuemax={PASSWORD_MIN_LENGTH}
+          aria-valuenow={Math.min(password.length, PASSWORD_MIN_LENGTH)}
+          className="h-1.5 overflow-hidden rounded-full bg-line"
+        >
+          <div
+            className={`h-full rounded-full transition-all ${password.length >= PASSWORD_MIN_LENGTH ? "bg-emerald-500" : "bg-brand"}`}
+            style={{ width: `${Math.min((password.length / PASSWORD_MIN_LENGTH) * 100, 100)}%` }}
+          />
+        </div>
+        <p id="register-password-length" className={`text-sm font-medium ${password.length >= PASSWORD_MIN_LENGTH ? "text-success-strong" : "text-muted"}`}>
+          {password.length < PASSWORD_MIN_LENGTH
+            ? `${PASSWORD_MIN_LENGTH - password.length} more characters needed`
+            : "Password length looks good"}
+        </p>
+      </div>
 
       <Button type="submit" fullWidth loading={registerMutation.isPending}>
         {registerMutation.isPending ? "Creating account..." : "Create account"}

@@ -1,14 +1,12 @@
 import type { ReactElement } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Briefcase, Building2, Check, Clock } from "lucide-react";
-import { Badge, Card } from "../ui";
+import { Briefcase, Building2, Check } from "lucide-react";
+import { Card } from "../ui";
 import { Section } from "./Section";
 import { SectionHeading } from "./SectionHeading";
 
 interface AudiencePoint {
   text: string;
-  // true = not built yet. Shown with a clock icon AND a "Planned" label.
-  planned?: boolean;
 }
 
 interface Audience {
@@ -26,8 +24,8 @@ const audiences: Audience[] = [
       "Developers, designers, writers, marketers, freelancers, and job seekers.",
     points: [
       { text: "Build a profile backed by real projects" },
-      { text: "Show your skills together with the work behind them" },
-      { text: "Be discovered by clients and collaborators", planned: true },
+      { text: "Use AI career support to plan your next step" },
+      { text: "Connect, message, and share your work with the community" },
     ],
   },
   {
@@ -36,10 +34,9 @@ const audiences: Audience[] = [
     description:
       "Startups, companies, and individuals who need skilled people.",
     points: [
-      { text: "Create a business profile people can trust" },
-      { text: "Present your company and the work you do" },
-      { text: "Find talent by skill and proven work", planned: true },
-      { text: "Post jobs and projects", planned: true },
+      { text: "Create a business profile and present your work" },
+      { text: "Publish jobs and projects for skilled professionals" },
+      { text: "Find people, connect, and start a conversation" },
     ],
   },
 ];
@@ -69,25 +66,11 @@ export function AudienceSection(): ReactElement {
                   key={point.text}
                   className="flex items-start gap-3 text-sm text-ink"
                 >
-                  {point.planned ? (
-                    <Clock
-                      className="mt-0.5 h-4 w-4 shrink-0 text-muted"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Check
-                      className="mt-0.5 h-4 w-4 shrink-0 text-success-strong"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <span>
-                    {point.text}
-                    {point.planned ? (
-                      <Badge tone="neutral" className="ml-2 align-middle">
-                        Planned
-                      </Badge>
-                    ) : null}
-                  </span>
+                  <Check
+                    className="mt-0.5 h-4 w-4 shrink-0 text-success-strong"
+                    aria-hidden="true"
+                  />
+                  <span>{point.text}</span>
                 </li>
               ))}
             </ul>

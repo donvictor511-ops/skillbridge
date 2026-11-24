@@ -1,6 +1,12 @@
 import type { ReactElement } from "react";
 import type { LucideIcon } from "lucide-react";
-import { FolderOpen, Layers, ShieldCheck, Users } from "lucide-react";
+import {
+  BrainCircuit,
+  BriefcaseBusiness,
+  FolderOpen,
+  MessagesSquare,
+  Users,
+} from "lucide-react";
 import { Card } from "../ui";
 import { Section } from "./Section";
 import { SectionHeading } from "./SectionHeading";
@@ -19,22 +25,28 @@ const features: Feature[] = [
       "Add projects that prove what you can do, so your profile is more than a list of claims.",
   },
   {
-    icon: Layers,
-    title: "Skills with context",
+    icon: BrainCircuit,
+    title: "AI Career Studio",
     description:
-      "Connect each skill to the work behind it, so visitors can see how you use it.",
+      "Get practical help with your profile, career direction, writing, and relevant opportunities.",
+  },
+  {
+    icon: BriefcaseBusiness,
+    title: "Jobs and projects",
+    description:
+      "Explore opportunities, publish projects, and connect with people ready to do the work.",
+  },
+  {
+    icon: MessagesSquare,
+    title: "Community that moves work forward",
+    description:
+      "Share updates, join professional communities, and message collaborators directly.",
   },
   {
     icon: Users,
     title: "Built for both sides",
     description:
-      "Professionals and clients each get a profile and tools designed for them.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Trust and privacy first",
-    description:
-      "You control what is public. Security and honesty are built in from day one, and we never show a verification badge that was not earned.",
+      "Professionals and clients each get profiles and tools made for their goals.",
   },
 ];
 
@@ -44,11 +56,11 @@ export function FeaturesSection(): ReactElement {
       <SectionHeading
         id="features-heading"
         eyebrow="What you get"
-        title="A profile that shows, not just tells"
-        description="The foundation of SkillBridge is simple: real work, clearly presented."
+        title="Everything you need to build momentum"
+        description="From your first portfolio project to your next collaboration, SkillBridge brings your professional journey together."
       />
 
-      <div className="mt-10 grid gap-6 sm:grid-cols-2">
+      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {features.map(({ icon: Icon, title, description }) => (
           <Card key={title} padding="lg">
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/15 text-navy">

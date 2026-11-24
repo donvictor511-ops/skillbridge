@@ -4,7 +4,9 @@ import { SESSION_COOKIE_NAME } from "./session.service";
 
 const baseCookieOptions: CookieOptions = {
   httpOnly: true, // JavaScript in the page cannot read this cookie
-  sameSite: "lax", // not sent on cross-site form posts
+  // The production UI (Vercel) and API (Render) are on different sites.
+  // Lax prevents the browser from sending the session cookie on API fetches.
+  sameSite: env.nodeEnv === "production" ? "none" : "lax",
   secure: env.nodeEnv === "production", // HTTPS only in production
   path: "/",
 };

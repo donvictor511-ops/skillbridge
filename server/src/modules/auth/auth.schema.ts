@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { isCommonPassword } from "./commonPasswords";
 
-export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
 const emailSchema = z
@@ -46,7 +46,20 @@ export const accountAppealSchema = loginSchema.extend({
   message: z.string().trim().min(20, "Please explain your appeal in at least 20 characters.").max(2000),
 });
 
+export const passwordResetRequestSchema = z.object({ email: emailSchema });
+
+export const passwordResetSchema = z.object({
+  token: z.string().min(40).max(200),
+  password: z
+    .string("Password is required.")
+    .min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`)
+    .max(PASSWORD_MAX_LENGTH, `Password must be at most ${PASSWORD_MAX_LENGTH} characters long.`)
+    .refine((value) => !isCommonPassword(value), "This password is too common. Please choose a longer, more unique one."),
+});
+
 // TypeScript types created FROM the schemas, so they can never disagree.
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type AccountAppealInput = z.infer<typeof accountAppealSchema>;
+export type PasswordResetRequestInput = z.infer<typeof passwordResetRequestSchema>;
+export type PasswordResetInput = z.infer<typeof passwordResetSchema>;

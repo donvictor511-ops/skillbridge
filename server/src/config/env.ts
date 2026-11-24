@@ -12,6 +12,8 @@ export interface Env {
   cloudinaryApiSecret: string;
   geminiApiKey?: string;
   geminiModel: string;
+  resendApiKey?: string;
+  resendFromEmail?: string;
 }
 
 function readNodeEnv(value: string | undefined): NodeEnv {
@@ -69,4 +71,6 @@ export const env: Env = {
   ),
   geminiApiKey: process.env.GEMINI_API_KEY?.trim() || undefined,
   geminiModel: process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite",
+  resendApiKey: process.env.RESEND_API_KEY?.trim() || undefined,
+  resendFromEmail: process.env.RESEND_FROM_EMAIL?.trim() || undefined,
 };

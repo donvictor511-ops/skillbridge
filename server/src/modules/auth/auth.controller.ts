@@ -5,9 +5,10 @@ import {
   readSessionToken,
   setSessionCookie,
 } from "./auth.cookies";
-import { accountAppealSchema, loginSchema, registerSchema } from "./auth.schema";
+import { accountAppealSchema, loginSchema, passwordResetRequestSchema, passwordResetSchema, registerSchema } from "./auth.schema";
 import { loginUser, registerUser, submitAccountAppeal } from "./auth.service";
 import { createSession, deleteSessionByToken } from "./session.service";
+import { requestPasswordReset, resetPassword } from "./passwordReset.service";
 
 export async function register(req: Request, res: Response): Promise<void> {
   // If the body is invalid, parse() throws a ZodError, and the error handler
@@ -35,6 +36,26 @@ export async function login(req: Request, res: Response): Promise<void> {
 export async function accountAppeal(req: Request, res: Response): Promise<void> {
   const input = accountAppealSchema.parse(req.body);
   res.status(201).json({ data: await submitAccountAppeal(input) });
+}
+
+export async function requestPasswordResetHandler(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const input = passwordResetRequestSchema.parse(req.body);
+  await requestPasswordReset(input.email);
+  res.status(200).json({
+    data: { message: "If an account exists for that email, reset instructions are on the way." },
+  });
+}
+
+export async function resetPasswordHandler(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const input = passwordResetSchema.parse(req.body);
+  await resetPassword(input.token, input.password);
+  res.status(200).json({ data: { message: "Your password has been updated. Please log in." } });
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {

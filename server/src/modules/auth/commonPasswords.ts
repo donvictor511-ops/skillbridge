@@ -1,4 +1,4 @@
-// A small starter list of very common passwords that are at least 12
+// A small starter list of very common passwords that are at least 8
 // characters long (shorter ones are already rejected by the length rule).
 // Real products also check passwords against large breached-password lists.
 // We may upgrade this later.

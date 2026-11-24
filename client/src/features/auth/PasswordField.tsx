@@ -19,7 +19,7 @@ export function PasswordField(props: PasswordFieldProps): ReactElement {
         <button
           type="button"
           onClick={() => setIsVisible((visible) => !visible)}
-          aria-label="Show password"
+          aria-label={isVisible ? "Hide password" : "Show password"}
           aria-pressed={isVisible}
           className="inline-flex h-9 w-9 items-center justify-center rounded-control text-muted transition-colors hover:text-navy"
         >

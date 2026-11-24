@@ -4,7 +4,6 @@ import { FeaturesSection } from "../components/landing/FeaturesSection";
 import { FinalCtaSection } from "../components/landing/FinalCtaSection";
 import { HeroSection } from "../components/landing/HeroSection";
 import { HowItWorksSection } from "../components/landing/HowItWorksSection";
-import { PlannedSection } from "../components/landing/PlannedSection";
 
 // The page only assembles sections. The layout provides the <main>.
 export default function LandingPage(): ReactElement {
@@ -14,7 +13,6 @@ export default function LandingPage(): ReactElement {
       <AudienceSection />
       <FeaturesSection />
       <HowItWorksSection />
-      <PlannedSection />
       <FinalCtaSection />
     </>
   );

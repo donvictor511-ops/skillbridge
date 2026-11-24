@@ -16,12 +16,12 @@ const steps: Step[] = [
   {
     title: "Build your profile",
     description:
-      "Add your headline, skills, and portfolio projects. Everything is yours to edit.",
+      "Add your story, skills, and portfolio projects so people can see what you bring.",
   },
   {
     title: "Share your work",
     description:
-      "Send people your profile link and let your projects do the talking. Networking and opportunities come next.",
+      "Meet your community, explore opportunities, and start meaningful conversations.",
   },
 ];
 

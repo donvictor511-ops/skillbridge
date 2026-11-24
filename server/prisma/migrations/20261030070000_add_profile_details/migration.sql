@@ -1,15 +1,58 @@
 
 -- CreateEnum
-CREATE TYPE "profile_visibility" AS ENUM ('public', 'members', 'private');
+DO $$ BEGIN
+  CREATE TYPE "profile_visibility" AS ENUM ('public', 'members', 'private');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "business_size_range" AS ENUM ('1-10', '11-50', '51-200', '201-500', '501+');
+DO $$ BEGIN
+  CREATE TYPE "business_size_range" AS ENUM ('1-10', '11-50', '51-200', '201-500', '501+');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- The original users migration created users but omitted the onboarding tables.
+-- Restore the base tables here so this migration can be retried after its known
+-- Neon failure, which occurred before the profiles table existed.
+CREATE TABLE IF NOT EXISTS "profiles" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "user_id" UUID NOT NULL,
+    "display_name" TEXT NOT NULL,
+    "headline" TEXT,
+    "location" TEXT,
+    "interests" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+    "goals" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "profiles_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "profiles_user_id_key" ON "profiles"("user_id");
+
+CREATE TABLE IF NOT EXISTS "skills" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "name_key" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "skills_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "skills_name_key_key" ON "skills"("name_key");
+
+CREATE TABLE IF NOT EXISTS "user_skills" (
+    "user_id" UUID NOT NULL,
+    "skill_id" UUID NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "user_skills_pkey" PRIMARY KEY ("user_id", "skill_id"),
+    CONSTRAINT "user_skills_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "user_skills_skill_id_fkey" FOREIGN KEY ("skill_id") REFERENCES "skills"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "user_skills_skill_id_idx" ON "user_skills"("skill_id");
 
 -- AlterTable
-ALTER TABLE "profiles" ADD COLUMN "avatar_url" VARCHAR(2048),
-ADD COLUMN "bio" VARCHAR(2000),
-ADD COLUMN "cover_url" VARCHAR(2048),
-ADD COLUMN "visibility" "profile_visibility" NOT NULL DEFAULT 'members';
+ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "avatar_url" VARCHAR(2048),
+ADD COLUMN IF NOT EXISTS "bio" VARCHAR(2000),
+ADD COLUMN IF NOT EXISTS "cover_url" VARCHAR(2048),
+ADD COLUMN IF NOT EXISTS "visibility" "profile_visibility" NOT NULL DEFAULT 'members';
 
 -- CreateTable
 CREATE TABLE "experiences" (

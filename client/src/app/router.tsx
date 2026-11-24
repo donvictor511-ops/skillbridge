@@ -15,6 +15,8 @@ import OnboardingPage from "../pages/OnboardingPage";
 import PreviewProfilePage from "../pages/PreviewProfilePage";
 import ProfilePage from "../pages/ProfilePage";
 import RegisterPage from "../pages/RegisterPage";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 import AccessDeniedPage from "../pages/AccessDeniedPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import RouteErrorPage from "../pages/RouteErrorPage";
@@ -47,6 +49,8 @@ export const router = createBrowserRouter([
         children: [
           { path: paths.home, element: <HomePage /> },
           { path: paths.guidelines, element: <CommunityGuidelinesPage /> },
+          { path: paths.forgotPassword, element: <ForgotPasswordPage /> },
+          { path: paths.resetPassword, element: <ResetPasswordPage /> },
           ...developmentOnlyRoutes,
           { path: paths.accessDenied, element: <AccessDeniedPage /> },
           { path: paths.profilePattern, element: <ProfilePage /> },

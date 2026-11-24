@@ -120,10 +120,45 @@
   animation: navigation-progress-complete 700ms ease-out forwards;
 }
 
+.hero-scene-grid {
+  background-image: linear-gradient(rgb(37 99 235 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(37 99 235 / 0.045) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+}
+
+.hero-person-frame {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 86%, transparent 100%);
+}
+
+.hero-orbit-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  offset-path: ellipse(42.6% 21.25% at 50% 55.2%);
+  offset-anchor: center;
+  offset-rotate: 0deg;
+  animation: hero-icon-orbit 10s linear infinite;
+}
+
+.hero-orbit-icon--2 {
+  animation-delay: -3.333s;
+}
+
+.hero-orbit-icon--3 {
+  animation-delay: -6.667s;
+}
+
+@keyframes hero-icon-orbit {
+  from { offset-distance: 0%; }
+  to { offset-distance: 100%; }
+}
+
 @keyframes navigation-progress-complete {
   to { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .navigation-progress-fill { animation-duration: 1ms; }
+  .hero-orbit-icon { animation: none; }
 }

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { FormEvent, ReactElement } from "react";
+import { Link } from "react-router";
+import { paths } from "../../app/paths";
 import { Button, ErrorMessage, Input } from "../../components/ui";
 import { getApiErrorInfo } from "../../lib/apiError";
 import { focusFirstInvalidField } from "../../lib/forms";
@@ -74,6 +76,7 @@ export function LoginForm(): ReactElement {
         name="email"
         type="email"
         label="Email"
+        placeholder="you@example.com"
         autoComplete="email"
         inputMode="email"
         autoCapitalize="none"
@@ -102,6 +105,12 @@ export function LoginForm(): ReactElement {
         }}
         error={fieldErrors.password}
       />
+
+      <div className="-mt-2 flex justify-end">
+        <Link to={paths.forgotPassword} className="rounded-control text-sm font-semibold text-brand underline-offset-4 hover:underline">
+          Forgot password?
+        </Link>
+      </div>
 
       <Button type="submit" fullWidth loading={loginMutation.isPending}>
         {loginMutation.isPending ? "Logging in..." : "Log in"}
