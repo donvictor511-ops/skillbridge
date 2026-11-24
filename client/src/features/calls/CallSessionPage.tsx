@@ -114,8 +114,59 @@ export function CallSessionPage(): ReactElement {
   function toggleMic() { const next = !muted; setMuted(next); localStream.current?.getAudioTracks().forEach((track) => { track.enabled = !next; }); }
   function toggleCamera() { const next = !cameraOff; setCameraOff(next); localStream.current?.getVideoTracks().forEach((track) => { track.enabled = !next; }); }
   async function toggleScreenShare() {
-    if (screenStream.current) { const old = screenStream.current; screenStream.current = null; old.getTracks().forEach((track) => { track.onended = null; track.stop(); }); const camera = localStream.current?.getVideoTracks()[0] ?? null; for (const pc of peers.current.values()) { const sender = pc.getSenders().find((item) => item.track?.kind === "video"); if (sender) await sender.replaceTrack(camera); } setSharingScreen(false); return; }
-    try { const display = await navigator.mediaDevices.getDisplayMedia({ video: true }); screenStream.current = display; const track = display.getVideoTracks()[0]; if (!track) throw new Error("No screen track was available."); for (const pc of peers.current.values()) { const sender = pc.getSenders().find((item) => item.track?.kind === "video"); if (sender) await sender.replaceTrack(track); } setSharingScreen(true); track.onended = () => { screenStream.current = null; const camera = localStream.current?.getVideoTracks()[0] ?? null; for (const pc of peers.current.values()) { const sender = pc.getSenders().find((item) => item.track?.kind === "video"); if (sender) void sender.replaceTrack(camera); } setSharingScreen(false); }; } catch { setError("Screen sharing could not start. Check your browser permissions and try again."); }
+    const restoreCamera = async () => {
+      const camera = localStream.current?.getVideoTracks()[0] ?? null;
+      await Promise.all([...peers.current.values()].map(async (pc) => {
+        const sender = pc.getSenders().find((item) => item.track?.kind === "video")
+          ?? pc.getTransceivers().find((item) => item.receiver.track.kind === "video")?.sender;
+        if (sender) await sender.replaceTrack(camera);
+      }));
+    };
+    if (screenStream.current) {
+      const old = screenStream.current;
+      screenStream.current = null;
+      old.getTracks().forEach((track) => { track.onended = null; track.stop(); });
+      await restoreCamera();
+      setSharingScreen(false);
+      return;
+    }
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setError("Screen sharing is not supported by this browser. Try a desktop version of Chrome, Edge, or Firefox.");
+      return;
+    }
+    try {
+      const display = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 15, max: 30 } }, audio: false });
+      const track = display.getVideoTracks()[0];
+      if (!track) throw new Error("The browser did not provide a screen video track.");
+      track.contentHint = "detail";
+      screenStream.current = display;
+      await Promise.all([...peers.current.entries()].map(async ([peerId, pc]) => {
+        let sender = pc.getSenders().find((item) => item.track?.kind === "video")
+          ?? pc.getTransceivers().find((item) => item.receiver.track.kind === "video")?.sender;
+        if (sender) await sender.replaceTrack(track);
+        else {
+          sender = pc.addTrack(track, display);
+          const currentRoom = room;
+          if (currentRoom) await offerPeer(peerId, currentRoom);
+        }
+      }));
+      setError("");
+      setSharingScreen(true);
+      track.onended = () => {
+        screenStream.current = null;
+        void restoreCamera().finally(() => setSharingScreen(false));
+      };
+    } catch (problem) {
+      screenStream.current?.getTracks().forEach((track) => track.stop());
+      screenStream.current = null;
+      setSharingScreen(false);
+      const errorName = problem instanceof DOMException ? problem.name : "";
+      setError(errorName === "NotAllowedError"
+        ? "Screen sharing was cancelled or blocked. Allow screen capture in your browser and try again."
+        : errorName === "NotFoundError"
+          ? "No screen or window was available to share."
+          : "Screen sharing could not start. Use a supported desktop browser and check its screen-capture permissions.");
+    }
   }
   async function postChat(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); if (!callId || (!chatDraft.trim() && !chatFile && !chatVoice)) return; try { const media = chatFile ? await uploadPostMedia(chatFile) : chatVoice ? await uploadCallVoice(chatVoice) : null; const sent = await sendCallMessage(callId, { content: chatDraft.trim(), ...(media ?? {}) }); setCallMessages((items) => items.some((item) => item.id === sent.id) ? items : [...items, sent]); setChatDraft(""); setChatFile(null); setChatVoice(null); setChatError(""); } catch { setChatError("Could not send this message. Please try again."); } }
   useEffect(() => { if (messageList.current) messageList.current.scrollTop = messageList.current.scrollHeight; }, [callMessages, chatOpen]);

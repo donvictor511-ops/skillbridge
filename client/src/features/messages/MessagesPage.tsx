@@ -44,6 +44,7 @@ export function MessagesPage(): ReactElement {
   const [archived, setArchived] = useState(false);
   const [draft, setDraft] = useState("");
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
   const [messageError, setMessageError] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [startingCall, setStartingCall] = useState(false);
@@ -111,8 +112,9 @@ export function MessagesPage(): ReactElement {
   }, [activeMenuId]);
 
   useEffect(() => {
+    if (playingVoiceId) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [selectedId, latestMessageId]);
+  }, [selectedId, latestMessageId, playingVoiceId]);
 
   const conversation = detail.data ?? conversations.find((item) => item.id === selectedId);
 
@@ -270,7 +272,7 @@ export function MessagesPage(): ReactElement {
                             {editingId !== message.id && message.content ? <p className={`whitespace-pre-wrap break-words ${message.isDeleted ? "italic opacity-75" : ""}`}>{message.content}</p> : null}
                             {message.replyTo ? <button type="button" onClick={() => document.getElementById(`message-${message.replyTo?.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })} className="mb-2 block w-full rounded-lg border-l-2 border-current/50 bg-black/5 px-2 py-1 text-left text-xs"><span className="block font-semibold">Replying to {message.replyTo.senderName}</span><span className="block truncate opacity-80">{message.replyTo.content || (message.replyTo.mediaType === "video" ? "Sent a video" : message.replyTo.mediaType === "image" ? "Sent a photo" : "Message")}</span></button> : null}
                             {message.mediaUrl && (message.mediaType === "image" || message.mediaType === "video") ? <><p className="mt-2 text-[11px] font-semibold opacity-80">{message.mediaType === "image" ? "Sent a photo" : "Sent a video"}</p><div className="relative mt-1">{message.mediaType === "image" ? <button type="button" onClick={() => setExpandedMedia({ url: message.mediaUrl!, type: "image" })} aria-label="Expand photo" className="block cursor-zoom-in"><img src={message.mediaUrl} alt="Photo attachment; select to expand" className="max-h-80 max-w-full rounded-lg object-contain" /></button> : <><video src={message.mediaUrl} controls playsInline className="max-h-80 max-w-full rounded-lg" /><button type="button" onClick={() => setExpandedMedia({ url: message.mediaUrl!, type: "video" })} aria-label="Expand video" title="Expand video" className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-lg bg-black/60 text-white hover:bg-black/80"><Maximize2 className="h-4 w-4" /></button></>}</div></> : null}
-                            {message.mediaUrl && message.mediaType === "audio" ? <audio controls preload="metadata" src={message.mediaUrl} className="mt-2 max-w-full" aria-label="Voice message" /> : null}
+                            {message.mediaUrl && message.mediaType === "audio" ? <audio controls preload="metadata" src={message.mediaUrl} className="mt-2 block w-full max-w-full" aria-label="Voice message" onPlay={(event) => { setPlayingVoiceId(message.id); event.currentTarget.closest("[id^='message-']")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} onEnded={() => setPlayingVoiceId((id) => id === message.id ? null : id)} onPause={() => setPlayingVoiceId((id) => id === message.id ? null : id)} /> : null}
                             {message.reactions?.length || reactionPickerId === message.id ? <div className="mt-2 flex flex-wrap items-center gap-1">{message.reactions?.map((reaction) => <button key={reaction.emoji} type="button" onClick={() => actions.react.mutate({ conversationId: selectedId, messageId: message.id, emoji: reaction.emoji })} aria-label={`${reaction.emoji}, ${reaction.count} reactions`} className={`rounded-full border px-2 py-0.5 text-xs ${reaction.reactedByMe ? "border-brand bg-brand/10" : "border-line bg-surface/70"}`}>{reaction.emoji} {reaction.count}</button>)}{reactionPickerId === message.id ? ["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => <button key={emoji} type="button" onClick={() => { actions.react.mutate({ conversationId: selectedId, messageId: message.id, emoji }); setReactionPickerId(null); }} aria-label={`React ${emoji}`} className="grid h-7 w-7 place-items-center rounded-full hover:bg-black/10">{emoji}</button>) : null}</div> : null}
                             <div className="mt-1 flex items-center justify-end gap-2 text-[11px] opacity-75">
                               <time dateTime={message.createdAt}>{stamp(message.createdAt)}</time>
@@ -279,12 +281,12 @@ export function MessagesPage(): ReactElement {
                             </div>
                           </div>
                           {!message.isDeleted ? (
-                            <div data-message-menu className={`absolute top-1/2 z-20 -translate-y-1/2 ${isMine ? "right-full mr-1" : "left-full ml-1"}`}>
-                              <button type="button" onClick={() => setActiveMenuId(menuOpen ? null : message.id)} aria-label="Message options" aria-haspopup="menu" aria-expanded={menuOpen} className="rounded-full p-1.5 text-muted opacity-70 hover:bg-surface hover:text-navy focus:opacity-100 group-hover:opacity-100">
+                            <div data-message-menu className="absolute right-1 top-1 z-30">
+                              <button type="button" onClick={() => setActiveMenuId(menuOpen ? null : message.id)} aria-label="Message options" aria-haspopup="menu" aria-expanded={menuOpen} className={`grid min-h-9 min-w-9 place-items-center rounded-full bg-surface/90 text-muted shadow-sm hover:bg-surface hover:text-navy focus:opacity-100 ${menuOpen ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100"}`}>
                                 <MoreVertical className="h-4 w-4" />
                               </button>
                               {menuOpen ? (
-                                <div role="menu" aria-label="Message options" className={`absolute top-0 z-30 min-w-48 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-card ${isMine ? "right-full mr-1" : "left-full ml-1"}`}>
+                                <div role="menu" aria-label="Message options" className="absolute right-0 top-full z-40 mt-1 w-48 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-surface p-1.5 text-ink shadow-card">
                                   <button type="button" role="menuitem" onClick={() => void copyMessage(message)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-page"><Copy className="h-4 w-4" />Copy</button>
                                   <button type="button" role="menuitem" onClick={() => { setActiveMenuId(null); setReplyTarget(message); setReactionPickerId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-page"><Reply className="h-4 w-4" />Reply</button>
                                   <button type="button" role="menuitem" onClick={() => { setActiveMenuId(null); setReactionPickerId(reactionPickerId === message.id ? null : message.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-page"><SmilePlus className="h-4 w-4" />React</button>
