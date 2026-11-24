@@ -94,7 +94,7 @@ export function ShowcaseStep({
           </fieldset>
         ) : null}
       </div>
-      <p className="rounded-xl bg-page p-3 text-sm text-muted">Nothing is required on this step. Choose “Skip for now” to finish setup; you can add a photo or work later from Edit profile.</p>
+      <p className="rounded-xl bg-page p-3 text-sm text-muted">Your selected profile photo will still be saved. You can skip the project and add it later from Edit profile.</p>
     </div>
   );
 }

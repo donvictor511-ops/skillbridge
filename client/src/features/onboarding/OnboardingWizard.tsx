@@ -160,7 +160,9 @@ export function OnboardingWizard(): ReactElement {
   async function submitToServer(includeShowcase = true): Promise<void> {
     setFormError(null);
     let avatarUrl: string | undefined;
-    if (includeShowcase && avatarFile) {
+    // The photo and project are separate optional choices. Skipping the
+    // project must not discard a photo the person already selected.
+    if (avatarFile) {
       setIsUploadingPhoto(true);
       try {
         avatarUrl = (await uploadProfileImage("avatar", avatarFile)).imageUrl;
@@ -312,7 +314,7 @@ export function OnboardingWizard(): ReactElement {
             )}
             {isLastStep ? (
               <Button variant="secondary" disabled={isSaving} onClick={() => void submitToServer(false)}>
-                Skip for now
+                Skip project for now
               </Button>
             ) : null}
             <Button type="submit" loading={isSaving}>
