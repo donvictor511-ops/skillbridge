@@ -37,8 +37,11 @@ export function VoiceRecordingButton({ onRecorded, disabled = false }: { onRecor
   }
 
   useEffect(() => () => { if (timeout.current !== null) window.clearTimeout(timeout.current); recorder.current?.stop(); stream.current?.getTracks().forEach((track) => track.stop()); }, []);
-  return <span className="inline-flex flex-col items-center">
-    <button type="button" onClick={() => void toggle()} disabled={disabled} aria-label={recording ? "Stop voice recording" : "Record a voice message"} title={recording ? "Stop recording" : "Record voice message"} className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${recording ? "animate-pulse bg-danger/10 text-danger" : "text-muted hover:bg-page hover:text-brand"}`}>{recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</button>
+  return <span className="inline-flex flex-col items-start">
+    <button type="button" onClick={() => void toggle()} disabled={disabled} aria-label={recording ? "Stop voice recording" : "Record a voice message"} title={recording ? "Stop recording" : "Record voice message"} className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors disabled:opacity-50 ${recording ? "animate-pulse border-danger/30 bg-danger text-white" : "border-line bg-surface text-ink hover:border-danger/40 hover:bg-danger/5"}`}>
+      {recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4 text-danger" />}
+      <span>{recording ? "Stop recording" : "Record audio"}</span>
+    </button>
     {error ? <span role="status" className="max-w-44 text-center text-[10px] text-danger">{error}</span> : null}
   </span>;
 }

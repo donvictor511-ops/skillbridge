@@ -8,9 +8,10 @@ export default function OnboardingPage(): ReactElement {
   const { data: user } = useCurrentUser();
 
   // Already finished? Nothing to do here. This also handles the moment right
-  // after a successful save: the cached user now has onboardedAt.
+  // after a successful save: the cached user now has onboardedAt. Show the
+  // profile they just created so the setup has a clear visible result.
   if (user?.onboardedAt) {
-    return <Navigate to={paths.dashboard} replace />;
+    return <Navigate to={paths.myProfile} replace />;
   }
 
   return (

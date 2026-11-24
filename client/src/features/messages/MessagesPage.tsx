@@ -191,11 +191,11 @@ export function MessagesPage(): ReactElement {
 
   return (
     <div className="h-full min-h-0 overflow-hidden bg-page">
-      <div className="h-full min-h-0 px-3 py-3 sm:px-6">
+      <div className="h-full min-h-0 px-0 py-0 sm:px-6 sm:py-3">
         <div className="mx-auto flex h-full min-h-0 max-w-[1440px] flex-col">
-          <h1 className="mb-3 shrink-0 text-2xl font-bold text-navy">Messages</h1>
+          <h1 className={`${selectedId ? "hidden md:block" : ""} mb-3 shrink-0 px-4 pt-3 text-2xl font-bold text-navy sm:px-0 sm:pt-0`}>Messages</h1>
           {actions.start.isError ? <div className="mb-2 shrink-0"><ErrorMessage message="Could not open this conversation. The profile may not be available for messaging." /></div> : null}
-          <Card padding="none" className="grid min-h-0 flex-1 overflow-hidden md:grid-cols-[20rem_minmax(0,1fr)]">
+          <Card padding="none" className="grid min-h-0 flex-1 overflow-hidden rounded-none border-x-0 sm:rounded-2xl sm:border-x md:grid-cols-[20rem_minmax(0,1fr)]">
           <aside className={`${selectedId ? "hidden md:flex" : "flex"} min-h-0 flex-col border-b border-line md:border-b-0 md:border-r`}>
             <div className="flex shrink-0 items-center justify-between border-b border-line p-3">
               <div className="flex gap-2">
@@ -255,7 +255,7 @@ export function MessagesPage(): ReactElement {
                   </Button>
                 </header>
 
-                <div ref={historyPaneRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+                <div ref={historyPaneRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-4">
                   {history.hasNextPage ? <button type="button" className="mx-auto block text-sm text-brand" onClick={() => void loadOlderMessages()}>Load older messages</button> : null}
                   {history.isPending ? <div className="text-center text-muted">Loading messages…</div> : null}
                   {history.isError ? <ErrorMessage message="Could not load messages. Please try again." onRetry={() => void history.refetch()} /> : null}
@@ -305,15 +305,20 @@ export function MessagesPage(): ReactElement {
                 {copyNotice ? <p role="status" className="shrink-0 px-4 py-1 text-right text-xs text-success-strong">{copyNotice}</p> : null}
                 {messageError ? <p role="alert" className="shrink-0 px-4 py-2 text-sm text-danger-strong">{messageError}</p> : null}
                 {replyTarget ? <div className="flex shrink-0 items-center gap-2 border-t border-line bg-page px-4 py-2"><Reply className="h-4 w-4 text-brand" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-navy">Replying to {replyTarget.sender.displayName}</p><p className="truncate text-xs text-muted">{replyTarget.content || (replyTarget.mediaType === "video" ? "Sent a video" : replyTarget.mediaType === "image" ? "Sent a photo" : "Voice message")}</p></div><button type="button" onClick={() => setReplyTarget(null)} aria-label="Cancel reply" className="rounded p-1 text-muted hover:bg-surface"><X className="h-4 w-4" /></button></div> : null}
-                <form onSubmit={submit} className="flex shrink-0 items-end gap-1.5 border-t border-line p-3 sm:gap-2">
-                  <label className="grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full text-muted hover:bg-page hover:text-brand" title="Attach an image or video"><ImagePlus className="h-5 w-5" /><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" className="sr-only" onChange={(event) => { setAttachment(event.target.files?.[0] ?? null); setVoiceNote(null); }} /></label>
-                  <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={5000} rows={2} placeholder={replyTarget ? `Reply to ${replyTarget.sender.displayName}…` : attachment?.name ?? voiceNote?.name ?? "Write a message…"} className="min-h-11 min-w-0 flex-1 resize-y rounded-control border border-line bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none" />
-                  <VoiceDictationButton onText={(text) => setDraft((value) => `${value}${value ? " " : ""}${text}`)} disabled={actions.send.isPending} />
-                  <VoiceRecordingButton disabled={actions.send.isPending} onRecorded={(file) => { setVoiceNote(file); setAttachment(null); }} />
-                  {voiceNote ? <button type="button" onClick={() => setVoiceNote(null)} aria-label="Remove voice recording" className="text-xs text-danger"><X className="h-4 w-4" /></button> : null}
-                  <Button type="submit" disabled={(!draft.trim() && !attachment && !voiceNote) || actions.send.isPending}>
-                    <Send className="mr-1 h-4 w-4" />{actions.send.isPending ? "Sending…" : "Send"}
-                  </Button>
+                <form onSubmit={submit} className="shrink-0 border-t border-line bg-surface p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
+                  <div className="flex items-end gap-2">
+                    <label className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-line bg-page text-muted transition-colors hover:text-brand" title="Attach an image or video" aria-label="Attach an image or video"><ImagePlus className="h-5 w-5" /><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" className="sr-only" onChange={(event) => { setAttachment(event.target.files?.[0] ?? null); setVoiceNote(null); }} /></label>
+                    <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={5000} rows={3} placeholder={replyTarget ? `Reply to ${replyTarget.sender.displayName}…` : attachment?.name ?? voiceNote?.name ?? "Write a message…"} className="min-h-[5.5rem] max-h-36 min-w-0 flex-1 resize-none rounded-2xl border border-line bg-page px-4 py-3 text-base leading-relaxed text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15" />
+                    {voiceNote ? <button type="button" onClick={() => setVoiceNote(null)} aria-label="Remove voice recording" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-danger hover:bg-danger/10"><X className="h-5 w-5" /></button> : null}
+                    <Button type="submit" aria-label={actions.send.isPending ? "Sending message" : "Send message"} disabled={(!draft.trim() && !attachment && !voiceNote) || actions.send.isPending} className="h-11 w-11 shrink-0 justify-center rounded-full px-0 sm:w-auto sm:rounded-xl sm:px-4">
+                      <Send className="h-5 w-5 sm:mr-2 sm:h-4 sm:w-4" /><span className="hidden sm:inline">{actions.send.isPending ? "Sending…" : "Send"}</span>
+                    </Button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2" aria-label="Voice message options">
+                    <VoiceDictationButton onText={(text) => setDraft((value) => `${value}${value ? " " : ""}${text}`)} disabled={actions.send.isPending} />
+                    <VoiceRecordingButton disabled={actions.send.isPending} onRecorded={(file) => { setVoiceNote(file); setAttachment(null); }} />
+                    <span className="ml-auto hidden text-xs text-muted sm:block">Enter to send · add an attachment or voice note</span>
+                  </div>
                 </form>
               </>
             )}
