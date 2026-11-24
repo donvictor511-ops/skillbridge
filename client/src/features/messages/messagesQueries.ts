@@ -2,10 +2,11 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import type { InfiniteData } from "@tanstack/react-query";
 import * as service from "./messagesService";
 import type { MessageItem, Page } from "./messages.types";
-export const messageKeys = { root:["messages"] as const, conversations:(archived=false)=>["messages","conversations",archived] as const, detail:(id:string)=>["messages","conversation",id] as const, history:(id:string)=>["messages","history",id] as const, unread:["messages","unread"] as const };
+export const messageKeys = { root:["messages"] as const, conversations:(archived=false)=>["messages","conversations",archived] as const, detail:(id:string)=>["messages","conversation",id] as const, history:(id:string)=>["messages","history",id] as const, calls:(id:string)=>["messages","call-history",id] as const, unread:["messages","unread"] as const };
 export function useConversations(archived=false) { return useInfiniteQuery({ queryKey:messageKeys.conversations(archived), queryFn:({pageParam})=>service.listConversations(archived,pageParam), initialPageParam:undefined as string|undefined, getNextPageParam:p=>p.nextCursor??undefined }); }
 export function useMessageHistory(id:string) { return useInfiniteQuery({ queryKey:messageKeys.history(id), queryFn:({pageParam})=>service.getMessages(id,pageParam), initialPageParam:undefined as string|undefined, getNextPageParam:p=>p.nextCursor??undefined, enabled:Boolean(id) }); }
 export function useConversation(id:string) { return useQuery({ queryKey:messageKeys.detail(id),queryFn:()=>service.getConversation(id),enabled:Boolean(id) }); }
+export function useConversationCalls(id:string) { return useQuery({ queryKey:messageKeys.calls(id),queryFn:()=>service.getConversationCalls(id),enabled:Boolean(id),refetchInterval:15000 }); }
 export function useUnreadMessages() { return useQuery({queryKey:messageKeys.unread,queryFn:service.unreadMessages,refetchInterval:30000}); }
 export function useMessagingActions() { const qc=useQueryClient(); const refresh=()=>{void qc.invalidateQueries({queryKey:messageKeys.root});void qc.invalidateQueries({queryKey:["notifications"]});}; return {
   start:useMutation({mutationFn:service.createConversation,onSuccess:(c)=>{qc.setQueryData(messageKeys.detail(c.id),c);refresh();}}),

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import { Link, NavLink, useLocation } from "react-router";
-import { Menu, X, House, Compass, BriefcaseBusiness, MessageCircle, UsersRound, MoreHorizontal, FolderKanban, Sparkles, UserRound, Shield, LayoutDashboard } from "lucide-react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router";
+import { Menu, X, ArrowLeft, House, Compass, BriefcaseBusiness, MessageCircle, UsersRound, MoreHorizontal, FolderKanban, Sparkles, UserRound, Shield, LayoutDashboard } from "lucide-react";
 
 import { paths } from "../../app/paths";
 import { useCurrentUser } from "../../features/auth/authQueries";
@@ -85,12 +85,15 @@ function MessagesNavLink({ mobile = false, bottom = false, onNavigate }: { mobil
 
 export function PublicHeader(): ReactElement {
   const location = useLocation();
+  const navigate = useNavigate();
   const menuId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const mobileMoreMenuRef = useRef<HTMLDivElement>(null);
 
   const { data: user } = useCurrentUser();
+  const historyIndex = window.history.state?.idx;
+  const canGoBack = typeof historyIndex === "number" && historyIndex > 0;
 
   const isOnboarded = Boolean(user?.onboardedAt);
   useMessagingEvents(isOnboarded);
@@ -157,6 +160,7 @@ export function PublicHeader(): ReactElement {
       <div className="mx-auto flex h-[3.75rem] max-w-screen-2xl items-center gap-3 px-3 sm:px-5 xl:gap-5">
         {/* Logo */}
         <div className="flex min-w-0 flex-1 items-center gap-3 xl:gap-5">
+          <button type="button" onClick={() => navigate(-1)} disabled={!canGoBack} aria-label="Go back" title={canGoBack ? "Go back" : "You are at the start of SkillBridge"} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-page hover:text-navy disabled:cursor-not-allowed disabled:opacity-35 lg:hidden"><ArrowLeft className="h-5 w-5" /></button>
           <Link
             to={paths.home}
             aria-label="SkillBridge home"

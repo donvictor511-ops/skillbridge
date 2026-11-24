@@ -2,8 +2,9 @@ export interface ConversationSummary {
   id: string; createdAt: string; updatedAt: string; archivedAt: string | null;
   otherUser: { userId: string; displayName: string; headline: string | null; avatarUrl: string | null; isOnline: boolean };
   unreadCount: number;
-  lastMessage: { id: string; senderId: string; content: string; isDeleted: boolean; createdAt: string } | null;
+  lastMessage: { id: string; senderId: string; content: string; isDeleted: boolean; createdAt: string; isCall?: boolean } | null;
 }
+export interface ConversationCall { id: string; mode: "audio" | "video"; status: "active" | "ended"; direction: "incoming" | "outgoing"; outcome: "completed" | "missed" | "declined" | "ringing"; createdAt: string; endedAt: string | null; }
 export interface MessageItem {
   id: string; conversationId: string; senderId: string; content: string; isDeleted: boolean;
   createdAt: string; readByRecipient: boolean; mediaUrl: string | null; mediaType: "image" | "video" | "audio" | null; editedAt: string | null;

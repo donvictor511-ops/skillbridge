@@ -172,12 +172,22 @@ async function formatConversation(row: ConversationRow, viewerId: string) {
   const hiddenForViewer = lastMessage && (row.userLowId === viewerId
     ? lastMessage.deletedForLowAt !== null
     : lastMessage.deletedForHighAt !== null);
-  const unreadCount = await unreadCountForConversation(
+  const [messageUnreadCount, callHistory] = await Promise.all([unreadCountForConversation(
     row.id,
     viewerId,
     participant.lastReadAt,
     row.userLowId === viewerId,
-  );
+  ), prisma.callSession.findMany({
+    where: { conversationId: row.id }, orderBy: { createdAt: "desc" }, take: 20,
+    select: { id: true, mode: true, status: true, createdAt: true, endedAt: true, createdById: true, participants: { select: { userId: true, status: true, joinedAt: true } } },
+  })]);
+  const latestCall = callHistory[0] ?? null;
+  const unreadMissedCalls = callHistory.filter((call) => call.status === "ended" && call.createdById !== viewerId && (!participant.lastReadAt || call.createdAt > participant.lastReadAt) && call.participants.some((item) => item.userId === viewerId && item.status === "invited" && item.joinedAt === null)).length;
+  const unreadCount = messageUnreadCount + unreadMissedCalls;
+  const latestViewerCallStatus = latestCall?.participants.find((item) => item.userId === viewerId)?.status;
+  const latestCallMissed = latestCall && latestCall.status === "ended" && latestViewerCallStatus !== "declined" && latestCall.participants.every((item) => item.userId === latestCall.createdById || item.joinedAt === null);
+  const callPreview = latestCall ? latestCall.status === "active" ? `${latestCall.createdById === viewerId ? "Calling" : "Incoming"} ${latestCall.mode === "audio" ? "voice" : "video"} call` : latestCall.createdById === viewerId ? (latestCall.participants.some((item) => item.status === "declined") ? `Declined ${latestCall.mode === "audio" ? "voice" : "video"} call` : latestCall.participants.some((item) => item.userId !== viewerId && item.joinedAt) ? `${latestCall.mode === "audio" ? "Voice" : "Video"} call` : `No answer · ${latestCall.mode === "audio" ? "voice" : "video"} call`) : latestViewerCallStatus === "declined" ? `Declined ${latestCall.mode === "audio" ? "voice" : "video"} call` : latestCallMissed ? `Missed ${latestCall.mode === "audio" ? "voice" : "video"} call` : `${latestCall.mode === "audio" ? "Voice" : "Video"} call` : null;
+  const callIsLatest = Boolean(latestCall && (!lastMessage || latestCall.createdAt > lastMessage.createdAt));
 
   return {
     id: row.id,
@@ -186,13 +196,21 @@ async function formatConversation(row: ConversationRow, viewerId: string) {
     archivedAt: participant.archivedAt?.toISOString() ?? null,
     otherUser: otherUser(row, viewerId),
     unreadCount,
-    lastMessage: lastMessage
+    lastMessage: callIsLatest && latestCall && callPreview ? {
+      id: latestCall.id,
+      senderId: latestCall.createdById,
+      content: callPreview,
+      isDeleted: false,
+      createdAt: latestCall.createdAt.toISOString(),
+      isCall: true,
+    } : lastMessage
       ? {
           id: lastMessage.id,
           senderId: lastMessage.senderId,
           content: hiddenForViewer ? "Message deleted for you." : conversationMessagePreview(lastMessage.content, lastMessage.deletedAt, lastMessage.mediaType),
           isDeleted: lastMessage.deletedAt !== null,
           createdAt: lastMessage.createdAt.toISOString(),
+          isCall: false,
         }
       : null,
   };
@@ -422,6 +440,28 @@ export async function listConversations(
 export async function getConversation(conversationId: string, userId: string) {
   const row = await findConversationRow(conversationId, userId);
   return formatConversation(row, userId);
+}
+
+export async function listConversationCalls(conversationId: string, userId: string) {
+  await findConversationRow(conversationId, userId);
+  const calls = await prisma.callSession.findMany({
+    where: { conversationId }, orderBy: { createdAt: "desc" }, take: 20,
+    select: { id: true, mode: true, status: true, createdAt: true, endedAt: true, createdById: true, participants: { select: { userId: true, status: true, joinedAt: true } } },
+  });
+  return calls.map((call) => {
+    const otherParticipant = call.participants.find((participant) => participant.userId !== call.createdById);
+    const answered = Boolean(otherParticipant?.joinedAt);
+    const outcome = call.status === "active" ? "ringing" : answered ? "completed" : otherParticipant?.status === "declined" ? "declined" : "missed";
+    return {
+      id: call.id,
+      mode: call.mode,
+      status: call.status,
+      direction: call.createdById === userId ? "outgoing" : "incoming",
+      outcome,
+      createdAt: call.createdAt.toISOString(),
+      endedAt: call.endedAt?.toISOString() ?? null,
+    };
+  });
 }
 
 export async function getMessageHistory(

@@ -16,6 +16,7 @@ messagesRouter.get("/unread-count", controller.unreadCount);
 messagesRouter.get("/conversations", controller.conversations);
 messagesRouter.post("/conversations", requireWriteAccess, controller.createConversation);
 messagesRouter.get("/conversations/:conversationId", controller.conversation);
+messagesRouter.get("/conversations/:conversationId/calls", controller.conversationCalls);
 messagesRouter.patch("/conversations/:conversationId/read", controller.readConversation);
 messagesRouter.delete("/conversations/:conversationId", controller.deleteConversation);
 messagesRouter.patch("/conversations/:conversationId/restore", controller.restore);

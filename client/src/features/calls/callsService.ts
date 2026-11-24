@@ -4,7 +4,7 @@ import type { ApiSuccessResponse } from "../../types/api";
 export type CallMode = "audio" | "video";
 export interface CallParticipant { userId: string; displayName: string; avatarUrl: string | null; status: "invited" | "joined" | "declined" | "left"; isOnline: boolean; }
 export interface CallRoom {
-  id: string; kind: "direct" | "community" | "interview"; mode: CallMode; status: "active" | "ended"; createdAt: string;
+  id: string; kind: "direct" | "community" | "interview"; mode: CallMode; status: "active" | "ended"; createdAt: string; conversationId: string | null;
   participants: CallParticipant[]; community: { id: string; name: string } | null;
   interview: { id: string; scheduledAt: string; durationMinutes: number; mode: CallMode; jobTitle: string } | null;
   iceServers?: RTCIceServer[];

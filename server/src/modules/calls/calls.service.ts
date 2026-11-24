@@ -16,7 +16,7 @@ const callInclude = {
 
 function serializeCall(call: Awaited<ReturnType<typeof loadCall>>) {
   return {
-    id: call.id, kind: call.kind, mode: call.mode, status: call.status, createdAt: call.createdAt.toISOString(),
+    id: call.id, kind: call.kind, mode: call.mode, status: call.status, createdAt: call.createdAt.toISOString(), conversationId: call.conversationId,
     community: call.community,
     interview: call.interview ? { id: call.interview.id, scheduledAt: call.interview.scheduledAt.toISOString(), durationMinutes: call.interview.durationMinutes, mode: call.interview.mode, jobTitle: call.interview.application.job.title } : null,
     participants: call.participants.map((participant) => ({
@@ -113,7 +113,7 @@ export async function createCall(userId: string, input: { kind: CallKind; mode: 
     include: callInclude,
   });
   const invitees = participantIds.filter((id) => id !== userId);
-  broadcast(call.id, invitees, "call.invite", { mode: call.mode, kind: call.kind, communityName, caller: { userId, displayName: call.createdBy.profile?.displayName ?? "SkillBridge member" } });
+  broadcast(call.id, invitees, "call.invite", { mode: call.mode, kind: call.kind, communityName, conversationId: call.conversationId, caller: { userId, displayName: call.createdBy.profile?.displayName ?? "SkillBridge member" } });
   return serializeCall(call);
 }
 

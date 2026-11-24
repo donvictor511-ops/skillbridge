@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { AppError } from "../../utils/appError";
 import {
   archiveConversation, createOrGetConversation, deleteMessage,
-  editMessage as editMessageService, getConversation, getMessageHistory, getUnreadMessageCount, listPresencePeerIds,
+  editMessage as editMessageService, getConversation, getMessageHistory, listConversationCalls, getUnreadMessageCount, listPresencePeerIds,
   listConversations, markConversationRead, restoreConversation, sendMessage, toggleMessageReaction,
 } from "./messages.service";
 import { addEventStream, isUserOnline, publishToUser, removeEventStream, sendEvent } from "./messages.realtime";
@@ -52,6 +52,10 @@ export async function createConversation(req: Request, res: Response): Promise<v
 export async function conversation(req: Request, res: Response): Promise<void> {
   const { conversationId } = conversationParamsSchema.parse(req.params);
   res.json({ data: await getConversation(conversationId, user(req).id) });
+}
+export async function conversationCalls(req: Request, res: Response): Promise<void> {
+  const { conversationId } = conversationParamsSchema.parse(req.params);
+  res.json({ data: await listConversationCalls(conversationId, user(req).id) });
 }
 export async function messageHistory(req: Request, res: Response): Promise<void> {
   const { conversationId } = conversationParamsSchema.parse(req.params);

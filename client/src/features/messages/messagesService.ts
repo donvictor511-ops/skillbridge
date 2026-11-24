@@ -1,9 +1,10 @@
 import { apiClient } from "../../services/apiClient";
-import type { ConversationSummary, MessageItem, Page } from "./messages.types";
+import type { ConversationCall, ConversationSummary, MessageItem, Page } from "./messages.types";
 export async function listConversations(archived = false, cursor?: string) {
   const { data } = await apiClient.get<Page<ConversationSummary>>("/messages/conversations", { params: { archived, cursor } }); return data;
 }
 export async function getConversation(id: string) { const { data } = await apiClient.get<{data: ConversationSummary}>(`/messages/conversations/${id}`); return data.data; }
+export async function getConversationCalls(id: string): Promise<ConversationCall[]> { const { data } = await apiClient.get<{data: ConversationCall[]}>(`/messages/conversations/${id}/calls`); return data.data; }
 export async function createConversation(userId: string) { const { data } = await apiClient.post<{data: ConversationSummary}>("/messages/conversations", { userId }); return data.data; }
 export async function getMessages(id: string, cursor?: string) { const { data } = await apiClient.get<Page<MessageItem>>(`/messages/conversations/${id}/messages`, { params: { cursor } }); return data; }
 export async function sendMessage(id: string, input: { content: string; mediaUrl?: string; mediaType?: "image" | "video" | "audio"; replyToMessageId?: string }) { const { data } = await apiClient.post<{data: MessageItem}>(`/messages/conversations/${id}/messages`, input); return data.data; }

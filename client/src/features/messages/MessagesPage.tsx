@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactElement } from "react";
 import { isAxiosError } from "axios";
 import { Link, useSearchParams } from "react-router";
-import { Archive, ChevronLeft, Copy, MessageCircle, MoreVertical, Send, Trash2, Phone, Video, ImagePlus, X, Maximize2, Reply, SmilePlus } from "lucide-react";
+import { Archive, ChevronLeft, Copy, MessageCircle, MoreVertical, Send, Trash2, Phone, Video, PhoneCall, PhoneMissed, ImagePlus, X, Maximize2, Reply, SmilePlus } from "lucide-react";
 
 import { profilePath } from "../../app/paths";
 import { Avatar, Button, Card, ErrorMessage } from "../../components/ui";
 import { useCurrentUser } from "../auth/authQueries";
-import { useConversation, useConversations, useMessageHistory, useMessagingActions } from "./messagesQueries";
-import type { ConversationSummary, MessageItem } from "./messages.types";
+import { useConversation, useConversationCalls, useConversations, useMessageHistory, useMessagingActions } from "./messagesQueries";
+import type { ConversationCall, ConversationSummary, MessageItem } from "./messages.types";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { startCall } from "../calls/callsService";
 import { paths } from "../../app/paths";
@@ -73,6 +73,7 @@ export function MessagesPage(): ReactElement {
   const { data: user } = useCurrentUser();
   const list = useConversations(archived);
   const detail = useConversation(selectedId);
+  const callHistory = useConversationCalls(selectedId);
   const history = useMessageHistory(selectedId);
   const actions = useMessagingActions();
   const conversations = useMemo(() => list.data?.pages.flatMap((page) => page.data) ?? [], [list.data]);
@@ -97,10 +98,16 @@ export function MessagesPage(): ReactElement {
     [history.data],
   );
   const latestMessageId = messages.at(-1)?.id;
+  const calls = callHistory.data ?? [];
+  const latestCallId = calls[0]?.id;
+  const timeline = useMemo(() => [
+    ...messages.map((item) => ({ type: "message" as const, item })),
+    ...calls.map((item) => ({ type: "call" as const, item })),
+  ].sort((left, right) => Date.parse(left.item.createdAt) - Date.parse(right.item.createdAt)), [messages, calls]);
 
   useEffect(() => {
     if (selectedId) actions.read.mutate(selectedId);
-  }, [selectedId, latestMessageId]);
+  }, [selectedId, latestMessageId, latestCallId]);
 
   useEffect(() => {
     if (!activeMenuId) return;
@@ -221,19 +228,19 @@ export function MessagesPage(): ReactElement {
               ) : conversations.length === 0 ? (
                 <div className="p-6 text-center text-sm text-muted">No conversations yet. Visit a profile and choose Message to start one.</div>
               ) : conversations.map((item) => (
-                <div key={item.id} className={`flex items-center gap-3 border-b border-line p-4 hover:bg-page ${selectedId === item.id ? "bg-brand/5" : ""}`}>
+                <div key={item.id} className={`flex items-center gap-3 border-b border-line p-4 hover:bg-page ${item.unreadCount > 0 ? "bg-brand/5" : ""} ${selectedId === item.id ? "bg-brand/5" : ""}`}>
                   <Link to={profilePath(item.otherUser.userId)} aria-label={`View ${item.otherUser.displayName}'s profile`} className="shrink-0 rounded-full">
                     <Avatar name={item.otherUser.displayName} src={item.otherUser.avatarUrl} />
                   </Link>
                   <button type="button" onClick={() => open(item)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2 font-semibold text-navy">
+                      <span className={`flex items-center gap-2 text-navy ${item.unreadCount > 0 ? "font-bold" : "font-semibold"}`}>
                         {item.otherUser.displayName}
                         <span role="status" aria-label={item.otherUser.isOnline ? "Online" : "Offline"} title={item.otherUser.isOnline ? "Online" : "Offline"} className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.otherUser.isOnline ? "bg-emerald-500" : "bg-slate-300"}`} />
                       </span>
-                      <span className="block truncate text-sm text-muted">{item.lastMessage?.content ?? "Start a conversation"}</span>
+                      <span className={`block truncate text-sm ${item.unreadCount > 0 ? "font-semibold text-ink" : "text-muted"}`}>{item.lastMessage?.content ?? "Start a conversation"}</span>
                     </span>
-                    {item.unreadCount > 0 ? <span className="rounded-full bg-brand px-2 py-0.5 text-xs text-white">{item.unreadCount}</span> : null}
+                    {item.unreadCount > 0 ? <span aria-label={`${item.unreadCount} unread message${item.unreadCount === 1 ? "" : "s"}`} className="rounded-full bg-brand px-2.5 py-1 text-xs font-bold text-white">{item.unreadCount > 99 ? "99+" : item.unreadCount}</span> : null}
                   </button>
                 </div>
               ))}
@@ -262,8 +269,8 @@ export function MessagesPage(): ReactElement {
                   </div>
                   <button type="button" onClick={() => void call("audio")} disabled={startingCall} aria-label="Start voice call" title="Voice call" className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-page hover:text-brand disabled:opacity-50"><Phone className="h-4 w-4" /></button>
                   <button type="button" onClick={() => void call("video")} disabled={startingCall} aria-label="Start video call" title="Video call" className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-page hover:text-brand disabled:opacity-50"><Video className="h-4 w-4" /></button>
-                  <Button size="sm" variant="secondary" onClick={() => archived ? actions.restore.mutate(selectedId) : actions.archive.mutate(selectedId)}>
-                    <Archive className="mr-1 h-4 w-4" />{archived ? "Restore" : "Archive"}
+                  <Button size="sm" variant="secondary" className="h-9 w-9 px-0 sm:h-10 sm:w-auto sm:px-3" onClick={() => archived ? actions.restore.mutate(selectedId) : actions.archive.mutate(selectedId)}>
+                    <Archive className="h-4 w-4 sm:mr-1" /><span className="sr-only sm:not-sr-only">{archived ? "Restore" : "Archive"}</span>
                   </Button>
                 </header>
 
@@ -271,7 +278,18 @@ export function MessagesPage(): ReactElement {
                   {history.hasNextPage ? <button type="button" className="mx-auto block text-sm text-brand" onClick={() => void loadOlderMessages()}>Load older messages</button> : null}
                   {history.isPending ? <div className="text-center text-muted">Loading messages…</div> : null}
                   {history.isError ? <ErrorMessage message="Could not load messages. Please try again." onRetry={() => void history.refetch()} /> : null}
-                  {messages.map((message) => {
+                  {timeline.map((entry) => {
+                    if (entry.type === "call") {
+                      const callItem = entry.item as ConversationCall;
+                      const modeLabel = callItem.mode === "audio" ? "voice" : "video";
+                      const directionLabel = callItem.outcome === "ringing" ? callItem.direction === "outgoing" ? "Calling" : "Incoming" : callItem.outcome === "missed" && callItem.direction === "incoming" ? "Missed" : callItem.outcome === "declined" ? callItem.direction === "outgoing" ? "Call declined" : "Declined" : callItem.direction === "outgoing" ? "Outgoing" : "Incoming";
+                      return <article key={`call-${callItem.id}`} className="mx-auto my-4 flex w-full max-w-md items-center gap-3 rounded-xl border border-line bg-surface px-3 py-3 shadow-sm sm:px-4">
+                        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${callItem.outcome === "missed" ? "bg-danger/10 text-danger-strong" : "bg-brand/10 text-brand"}`} aria-hidden="true">{callItem.outcome === "missed" ? <PhoneMissed className="h-5 w-5" /> : <PhoneCall className="h-5 w-5" />}</span>
+                        <div className="min-w-0 flex-1"><p className={`truncate text-sm font-semibold ${callItem.outcome === "missed" ? "text-danger-strong" : "text-navy"}`}>{directionLabel} {modeLabel} call</p><time dateTime={callItem.createdAt} className="text-xs text-muted">{stamp(callItem.createdAt)}</time></div>
+                        {callItem.outcome === "missed" || callItem.outcome === "declined" ? <button type="button" onClick={() => void call(callItem.mode)} disabled={startingCall} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-strong disabled:opacity-50"><Phone className="h-3.5 w-3.5" /><span>Call back</span></button> : null}
+                      </article>;
+                    }
+                    const message = entry.item;
                     const isMine = message.senderId === user?.id;
                     const menuOpen = activeMenuId === message.id;
                     return (
