@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isTooSimplePassword } from "./passwordPolicy";
 
 // Same helper, now shared. Re-exported so existing imports keep working.
 export { toFieldErrors } from "../../lib/zodErrors";
@@ -25,7 +26,8 @@ export const registerFormSchema = z.object({
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `Use at least ${PASSWORD_MIN_LENGTH} characters.`)
-    .max(PASSWORD_MAX_LENGTH, `Use at most ${PASSWORD_MAX_LENGTH} characters.`),
+    .max(PASSWORD_MAX_LENGTH, `Use at most ${PASSWORD_MAX_LENGTH} characters.`)
+    .refine((value) => !isTooSimplePassword(value), "This password is too simple. Avoid repeated characters, sequences, and keyboard patterns."),
 });
 
 export const forgotPasswordFormSchema = z.object({ email: emailField });
@@ -33,5 +35,6 @@ export const resetPasswordFormSchema = z.object({
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `Use at least ${PASSWORD_MIN_LENGTH} characters.`)
-    .max(PASSWORD_MAX_LENGTH, `Use at most ${PASSWORD_MAX_LENGTH} characters.`),
+    .max(PASSWORD_MAX_LENGTH, `Use at most ${PASSWORD_MAX_LENGTH} characters.`)
+    .refine((value) => !isTooSimplePassword(value), "This password is too simple. Avoid repeated characters, sequences, and keyboard patterns."),
 });

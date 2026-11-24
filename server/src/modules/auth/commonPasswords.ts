@@ -60,8 +60,37 @@ const COMMON_PASSWORDS: ReadonlySet<string> = new Set([
   "starwars1234",
   "freedom12345",
   "computer1234",
+  "11111111",
+  "00000000",
+  "22222222",
+  "33333333",
+  "44444444",
+  "55555555",
+  "66666666",
+  "77777777",
+  "88888888",
+  "99999999",
+  "87654321",
+  "qwertyuiop",
+  "asdfghjk",
+  "zxcvbnm",
 ]);
 
 export function isCommonPassword(password: string): boolean {
-  return COMMON_PASSWORDS.has(password.toLowerCase());
+  const normalized = password.toLowerCase();
+  if (COMMON_PASSWORDS.has(normalized)) return true;
+  if (/^(.)\1+$/u.test(normalized) || /^(.{1,4})\1+$/u.test(normalized)) return true;
+
+  const sequences = ["0123456789", "abcdefghijklmnopqrstuvwxyz", "qwertyuiop", "asdfghjkl", "zxcvbnm"];
+  for (const sequence of sequences) {
+    for (const direction of [sequence, [...sequence].reverse().join("")]) {
+      for (let length = 8; length <= direction.length; length += 1) {
+        for (let start = 0; start <= direction.length - length; start += 1) {
+          if (normalized.includes(direction.slice(start, start + length))) return true;
+        }
+      }
+    }
+  }
+
+  return new Set(normalized).size <= 2;
 }

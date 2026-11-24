@@ -8,6 +8,7 @@ import { completePasswordReset } from "../../services/authService";
 import { PASSWORD_MIN_LENGTH, resetPasswordFormSchema } from "./authSchemas";
 import { PasswordField } from "./PasswordField";
 import { suggestStrongPassword } from "./passwordGenerator";
+import { isTooSimplePassword } from "./passwordPolicy";
 
 export function ResetPasswordForm(): ReactElement {
   const [searchParams] = useSearchParams();
@@ -85,6 +86,11 @@ export function ResetPasswordForm(): ReactElement {
           setPasswordSuggested(false);
         }}
       />
+      {password.length >= PASSWORD_MIN_LENGTH ? (
+        <p aria-live="polite" className={`-mt-3 text-sm font-medium ${isTooSimplePassword(password) ? "text-danger" : "text-success-strong"}`}>
+          {isTooSimplePassword(password) ? "Too simple — try a less predictable password" : "Password looks good"}
+        </p>
+      ) : null}
       <div className="-mt-3 flex flex-wrap items-center justify-between gap-2">
         <button
           type="button"

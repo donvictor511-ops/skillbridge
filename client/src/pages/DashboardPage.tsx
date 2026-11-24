@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { Link } from "react-router";
 import {
@@ -24,7 +25,7 @@ import {
   getButtonClasses,
 } from "../components/ui";
 
-import { useCurrentUser, useLogout } from "../features/auth/authQueries";
+import { NEW_ACCOUNT_SESSION_KEY, useCurrentUser, useLogout } from "../features/auth/authQueries";
 import { AccountAppealForm } from "../features/auth/AccountAppealForm";
 import { capabilityOptions } from "../features/onboarding/onboardingOptions";
 import { useMyProfile } from "../features/profiles/profileQueries";
@@ -33,6 +34,15 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export default function DashboardPage(): ReactElement {
   useDocumentTitle("Dashboard | SkillBridge");
+
+  const [isNewAccount, setIsNewAccount] = useState(false);
+  useEffect(() => {
+    const isNew = window.sessionStorage.getItem(NEW_ACCOUNT_SESSION_KEY) === "1";
+    if (isNew) {
+      window.sessionStorage.removeItem(NEW_ACCOUNT_SESSION_KEY);
+      setIsNewAccount(true);
+    }
+  }, []);
 
   const { data: user } = useCurrentUser();
   const profileQuery = useMyProfile();
@@ -109,8 +119,8 @@ export default function DashboardPage(): ReactElement {
             </p>
 
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-navy sm:text-3xl">
-              Welcome back
-              {profile?.displayName ? `, ${profile.displayName}` : ""}
+              {isNewAccount ? "Welcome" : "Welcome back"}
+              {profile?.displayName ? `, ${profile.displayName}` : isNewAccount ? " to SkillBridge" : ""}
             </h1>
 
             <p className="mt-2 text-sm text-muted">

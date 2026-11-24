@@ -30,7 +30,7 @@ export const registerSchema = z.object({
     )
     .refine(
       (value) => !isCommonPassword(value),
-      "This password is too common. Please choose a longer, more unique one.",
+      "This password is too simple. Avoid repeated characters, sequences, and keyboard patterns.",
     ),
 });
 
@@ -54,7 +54,7 @@ export const passwordResetSchema = z.object({
     .string("Password is required.")
     .min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`)
     .max(PASSWORD_MAX_LENGTH, `Password must be at most ${PASSWORD_MAX_LENGTH} characters long.`)
-    .refine((value) => !isCommonPassword(value), "This password is too common. Please choose a longer, more unique one."),
+    .refine((value) => !isCommonPassword(value), "This password is too simple. Avoid repeated characters, sequences, and keyboard patterns."),
 });
 
 // TypeScript types created FROM the schemas, so they can never disagree.

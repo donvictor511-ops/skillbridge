@@ -5,6 +5,7 @@ import { getApiErrorInfo } from "../../lib/apiError";
 import { focusFirstInvalidField } from "../../lib/forms";
 import { useRegister } from "./authQueries";
 import { suggestStrongPassword } from "./passwordGenerator";
+import { isTooSimplePassword } from "./passwordPolicy";
 import {
   PASSWORD_MIN_LENGTH,
   registerFormSchema,
@@ -144,7 +145,9 @@ export function RegisterForm(): ReactElement {
         <p id="register-password-length" className={`text-sm font-medium ${password.length >= PASSWORD_MIN_LENGTH ? "text-success-strong" : "text-muted"}`}>
           {password.length < PASSWORD_MIN_LENGTH
             ? `${PASSWORD_MIN_LENGTH - password.length} more characters needed`
-            : "Password length looks good"}
+            : isTooSimplePassword(password)
+              ? "Too simple — try a less predictable password"
+              : "Password looks good"}
         </p>
       </div>
 

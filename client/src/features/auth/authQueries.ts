@@ -12,6 +12,8 @@ export const authKeys = {
   me: ["auth", "me"] as const,
 };
 
+export const NEW_ACCOUNT_SESSION_KEY = "skillbridge:new-account";
+
 // "Who is logged in?" The result is a user, or null when logged out.
 export function useCurrentUser() {
   return useQuery({
@@ -40,6 +42,7 @@ export function useRegister() {
   return useMutation({
     mutationFn: register,
     onSuccess: (user) => {
+      window.sessionStorage.setItem(NEW_ACCOUNT_SESSION_KEY, "1");
       queryClient.setQueryData(authKeys.me, user);
     },
   });
