@@ -8,14 +8,14 @@ export function useCompleteOnboarding() {
 
   return useMutation({
     mutationFn: completeOnboarding,
-    onSuccess: (user) => {
+    onSuccess: async (user) => {
       // The user now has onboardedAt set. OnboardingPage notices and sends
       // the person to the dashboard.
       queryClient.setQueryData(authKeys.me, user);
       // A profile query may have been cached before onboarding created the
       // profile row. Refresh it so the uploaded Cloudinary avatar appears
       // immediately after signup instead of requiring a manual profile edit.
-      void queryClient.invalidateQueries({ queryKey: profileRootKey });
+      await queryClient.invalidateQueries({ queryKey: profileRootKey });
     },
   });
 }
