@@ -69,7 +69,18 @@ export function CallSessionPage(): ReactElement {
         current = await joinCall(callId); if (closed) return;
         setRoom(current);
         setCallMessages(await listCallMessages(callId));
-        localStream.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: current.mode === "video" });
+        // Ask the browser to suppress speaker-to-microphone feedback. This is
+        // especially important when one person joins from a phone and another
+        // from a nearby laptop.
+        localStream.current = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
+          video: current.mode === "video",
+        });
         if (closed) { localStream.current.getTracks().forEach((track) => track.stop()); return; }
         if (localVideo.current) localVideo.current.srcObject = localStream.current;
         events = new EventSource(`${apiBaseURL}/messages/events`, { withCredentials: true });
