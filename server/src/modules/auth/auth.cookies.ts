@@ -1,10 +1,11 @@
-import type { CookieOptions, Request, Response } from "express";
+  import type { CookieOptions, Request, Response } from "express";
 import { env } from "../../config/env";
 import { SESSION_COOKIE_NAME } from "./session.service";
 
 const baseCookieOptions: CookieOptions = {
   httpOnly: true, // JavaScript in the page cannot read this cookie
-  sameSite: "lax", // not sent on cross-site form posts
+  // Vercel and Render are different sites; production fetches need this cookie.
+  sameSite: env.nodeEnv === "production" ? "none" : "lax",
   secure: env.nodeEnv === "production", // HTTPS only in production
   path: "/",
 };
