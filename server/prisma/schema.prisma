@@ -99,6 +99,13 @@ enum UserRole {
   @@map("user_role")
 }
 
+enum AuthProvider {
+  google
+  linkedin
+
+  @@map("auth_provider")
+}
+
 enum PostReportStatus {
   pending
   reviewed
@@ -240,6 +247,7 @@ model User {
   updatedAt               DateTime                  @updatedAt @map("updated_at")
   sessions                Session[]
   passwordResetTokens     PasswordResetToken[]
+  authIdentities          AuthIdentity[]
   profile                 Profile?
   skills                  UserSkill[]
   businessProfile         BusinessProfile?
@@ -291,6 +299,19 @@ model User {
   interviewsScheduled    Interview[]                @relation("InterviewScheduler")
 
   @@map("users")
+}
+
+model AuthIdentity {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  provider        AuthProvider
+  providerSubject String       @map("provider_subject") @db.VarChar(255)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+  @@index([userId])
+  @@map("auth_identities")
 }
 
 model UserBlock {

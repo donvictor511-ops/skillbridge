@@ -49,7 +49,11 @@ Public. Body: `email`, `password`. Starts a session.
 
 Public. Body: `email`. Sends a one-time password reset link when an account exists
 for the address. The response is the same for existing and unknown addresses.
-Links expire after 30 minutes. Requires `RESEND_API_KEY` and `RESEND_FROM_EMAIL`
+Links expire after 30 minutes. Configure `BREVO_API_KEY` and `BREVO_FROM_EMAIL` (recommended) or `RESEND_API_KEY` and `RESEND_FROM_EMAIL` to deliver reset email.
+
+### Social sign-in
+
+`GET /auth/oauth/:provider` starts Google or LinkedIn sign-in; the provider redirects to `/auth/oauth/:provider/callback`. Configure provider credentials and callback URLs as described in `docs/social-sign-in.md`.
 on the API service.
 
 ## POST /auth/password-reset/complete

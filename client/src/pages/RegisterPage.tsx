@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { paths } from "../app/paths";
 import { AuthCard } from "../features/auth/AuthCard";
 import { RegisterForm } from "../features/auth/RegisterForm";
+import { SocialAuthButtons } from "../features/auth/SocialAuthButtons";
 
 export default function RegisterPage(): ReactElement {
   return (
@@ -21,7 +22,10 @@ export default function RegisterPage(): ReactElement {
         </>
       }
     >
-      <RegisterForm />
+      <>
+        <SocialAuthButtons />
+        <RegisterForm />
+      </>
     </AuthCard>
   );
 }

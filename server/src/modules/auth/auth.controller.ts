@@ -9,6 +9,34 @@ import { accountAppealSchema, loginSchema, passwordResetRequestSchema, passwordR
 import { loginUser, registerUser, submitAccountAppeal } from "./auth.service";
 import { createSession, deleteSessionByToken } from "./session.service";
 import { requestPasswordReset, resetPassword } from "./passwordReset.service";
+import { beginOAuth, completeOAuth, isOAuthProvider, oauthFailureUrl, oauthSuccessUrl } from "./oauth.service";
+
+export function startOAuth(req: Request, res: Response): void {
+  const providerParam = req.params.provider;
+  const provider = typeof providerParam === "string" ? providerParam : "";
+  if (!isOAuthProvider(provider)) {
+    res.status(404).json({ error: { code: "OAUTH_PROVIDER_UNKNOWN", message: "That sign-in provider is not supported." } });
+    return;
+  }
+  beginOAuth(req, res, provider);
+}
+
+export async function finishOAuth(req: Request, res: Response): Promise<void> {
+  const providerParam = req.params.provider;
+  const provider = typeof providerParam === "string" ? providerParam : "";
+  if (!isOAuthProvider(provider)) {
+    res.redirect(302, oauthFailureUrl("google"));
+    return;
+  }
+  try {
+    await completeOAuth(req, res, provider);
+    res.redirect(302, oauthSuccessUrl());
+  } catch {
+    // Avoid putting provider error details, access tokens, or account data in
+    // the browser URL or server logs.
+    res.redirect(302, oauthFailureUrl(provider));
+  }
+}
 
 export async function register(req: Request, res: Response): Promise<void> {
   // If the body is invalid, parse() throws a ZodError, and the error handler

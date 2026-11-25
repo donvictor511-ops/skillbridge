@@ -12,8 +12,14 @@ export interface Env {
   cloudinaryApiSecret: string;
   geminiApiKey?: string;
   geminiModel: string;
+  brevoApiKey?: string;
+  brevoFromEmail?: string;
   resendApiKey?: string;
   resendFromEmail?: string;
+  googleClientId?: string;
+  googleClientSecret?: string;
+  linkedinClientId?: string;
+  linkedinClientSecret?: string;
 }
 
 function readNodeEnv(value: string | undefined): NodeEnv {
@@ -71,6 +77,12 @@ export const env: Env = {
   ),
   geminiApiKey: process.env.GEMINI_API_KEY?.trim() || undefined,
   geminiModel: process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite",
+  brevoApiKey: process.env.BREVO_API_KEY?.trim() || undefined,
+  brevoFromEmail: process.env.BREVO_FROM_EMAIL?.trim() || undefined,
   resendApiKey: process.env.RESEND_API_KEY?.trim() || undefined,
   resendFromEmail: process.env.RESEND_FROM_EMAIL?.trim() || undefined,
+  googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || undefined,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() || undefined,
+  linkedinClientId: process.env.LINKEDIN_CLIENT_ID?.trim() || undefined,
+  linkedinClientSecret: process.env.LINKEDIN_CLIENT_SECRET?.trim() || undefined,
 };

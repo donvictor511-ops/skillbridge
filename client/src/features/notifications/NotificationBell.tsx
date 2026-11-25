@@ -53,13 +53,13 @@ function NotificationItem({
 
   return (
     <div
-      className={`flex gap-2 border-b border-line px-3 py-3 ${notification.isRead ? "bg-surface" : "bg-brand/5"}`}
+      className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 border-b border-line px-3 py-3 ${notification.isRead ? "bg-surface" : "bg-brand/5"}`}
     >
       <Link
         to={profilePath(notification.actor.id)}
         aria-label={`View ${actorName}'s profile`}
         onClick={(event) => event.stopPropagation()}
-        className="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="row-span-2 shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
       >
         <Avatar name={actorName} src={avatarUrl} size="md" />
       </Link>
@@ -67,7 +67,7 @@ function NotificationItem({
       <button
         type="button"
         onClick={onClick}
-        className="flex min-w-0 flex-1 gap-3 text-left transition-colors hover:bg-page"
+        className="col-start-2 row-start-1 flex min-w-0 gap-3 text-left transition-colors hover:bg-page"
       >
         <span className="min-w-0 flex-1">
           <span className="block text-sm text-ink">
@@ -100,37 +100,41 @@ function NotificationItem({
         )}
       </button>
 
-      {notification.type === "follow" ? (
-        <FollowToggleButton
-          userId={notification.actor.id}
-          isFollowing={notification.actor.isFollowedByViewer}
-          followLabel="Follow back"
-        />
-      ) : null}
+      <div className="col-start-3 row-start-1 flex items-center gap-1">
+        {!notification.isRead && (
+          <button
+            type="button"
+            onClick={onMarkRead}
+            disabled={busy}
+            aria-label="Mark notification as read"
+            title="Mark as read"
+            className="rounded-control p-2 text-muted hover:bg-page hover:text-brand disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
 
-      {!notification.isRead && (
         <button
           type="button"
-          onClick={onMarkRead}
+          onClick={onDelete}
           disabled={busy}
-          aria-label="Mark notification as read"
-          title="Mark as read"
-          className="rounded-control p-2 text-muted hover:bg-page hover:text-brand disabled:opacity-50"
+          aria-label="Delete notification"
+          title="Delete notification"
+          className="rounded-control p-2 text-muted hover:bg-danger/10 hover:text-danger-strong disabled:opacity-50"
         >
-          <Check className="h-4 w-4" aria-hidden="true" />
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
         </button>
-      )}
+      </div>
 
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={busy}
-        aria-label="Delete notification"
-        title="Delete notification"
-        className="rounded-control p-2 text-muted hover:bg-danger/10 hover:text-danger-strong disabled:opacity-50"
-      >
-        <Trash2 className="h-4 w-4" aria-hidden="true" />
-      </button>
+      {notification.type === "follow" ? (
+        <div className="col-start-2 row-start-2 justify-self-start">
+          <FollowToggleButton
+            userId={notification.actor.id}
+            isFollowing={notification.actor.isFollowedByViewer}
+            followLabel="Follow back"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

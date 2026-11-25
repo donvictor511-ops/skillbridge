@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { paths } from "../app/paths";
 import { AuthCard } from "../features/auth/AuthCard";
 import { LoginForm } from "../features/auth/LoginForm";
+import { SocialAuthButtons } from "../features/auth/SocialAuthButtons";
 
 export default function LoginPage(): ReactElement {
   return (
@@ -21,7 +22,10 @@ export default function LoginPage(): ReactElement {
         </>
       }
     >
-      <LoginForm />
+      <>
+        <SocialAuthButtons />
+        <LoginForm />
+      </>
     </AuthCard>
   );
 }
