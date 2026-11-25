@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { profileRootKey } from "../../lib/queryKeys";
 import {
   getCurrentUser,
@@ -19,7 +20,13 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: authKeys.me,
     queryFn: getCurrentUser,
-    retry: false, // a 401 is an answer, not a failure to retry
+    // Retry transient network failures so the signed-in area can recover when
+    // the connection returns. HTTP errors still stop after the normal limit.
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && error.response && error.response.status < 500) return false;
+      return failureCount < 2;
+    },
+    refetchOnReconnect: "always",
     staleTime: 60_000,
   });
 }

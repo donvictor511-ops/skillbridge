@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import axios from "axios";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { paths } from "../../app/paths";
 import { ErrorMessage, Spinner } from "../../components/ui";
@@ -9,7 +10,7 @@ import { useCurrentUser } from "./authQueries";
 // which checks the session on every protected API request.
 export function ProtectedRoute(): ReactElement {
   const location = useLocation();
-  const { data: user, isPending, isError, refetch } = useCurrentUser();
+  const { data: user, isPending, isError, error, refetch } = useCurrentUser();
 
   if (isPending) {
     return (
@@ -21,7 +22,12 @@ export function ProtectedRoute(): ReactElement {
 
   // We could not find out (for example, the server is down).
   // That is NOT the same as "logged out", so we do not redirect.
-  if (isError) {
+  // Keep the current page mounted if we already know the user and the network
+  // temporarily fails. That preserves local page state (including open forms).
+  const temporaryConnectionFailure = isError && Boolean(user) && (
+    !axios.isAxiosError(error) || !error.response || error.response.status >= 500
+  );
+  if (isError && !temporaryConnectionFailure) {
     return (
       <div className="mx-auto max-w-xl px-4 py-16">
         <ErrorMessage

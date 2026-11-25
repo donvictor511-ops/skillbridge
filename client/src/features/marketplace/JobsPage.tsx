@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactElement, ReactNode } from "react";
+import axios from "axios";
 import { Link, useNavigate, useParams } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, BriefcaseBusiness, MapPin, Search, UserRound, X } from "lucide-react";
@@ -17,6 +18,13 @@ const categories = ["technology", "design", "marketing", "writing", "data", "bus
 const kinds = ["full_time", "part_time", "contract", "internship"];
 const pretty = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const actionClass = "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50";
+const JOB_DRAFT_KEY = "skillbridge.job-draft.v1";
+const JOB_FILTERS_KEY = "skillbridge.job-filters.v1";
+type JobDraft = { title?: string; description?: string; category?: string; employmentType?: string; budgetMin?: string; budgetMax?: string; currency?: string; location?: string; isRemote?: boolean };
+type JobFilters = { search: string; category: string; employmentType: string; remote: string; status: string; mine: boolean };
+function readSessionValue<T extends object>(key: string, fallback: T): T {
+  try { const value = sessionStorage.getItem(key); return value ? { ...fallback, ...JSON.parse(value) } : fallback; } catch { return fallback; }
+}
 
 export function JobsPage(): ReactElement { return <JobMarketplacePage applicationsOnly={false} />; }
 export function MyJobApplicationsPage(): ReactElement { return <JobMarketplacePage applicationsOnly />; }
@@ -25,16 +33,21 @@ function JobMarketplacePage({ applicationsOnly }: { applicationsOnly: boolean })
   useDocumentTitle(applicationsOnly ? "My applications | SkillBridge" : "Jobs | SkillBridge");
   const { listingId = "" } = useParams();
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [employmentType, setEmploymentType] = useState("");
-  const [remote, setRemote] = useState("");
-  const [status, setStatus] = useState("open");
-  const [mine, setMine] = useState(false);
+  const [filters, setFilters] = useState<JobFilters>(() => readSessionValue(JOB_FILTERS_KEY, { search: "", category: "", employmentType: "", remote: "", status: "open", mine: false }));
+  const { search, category, employmentType, remote, status, mine } = filters;
+  const [jobDraft, setJobDraft] = useState<JobDraft>(() => readSessionValue(JOB_DRAFT_KEY, {}));
   const [dialog, setDialog] = useState<"create" | "edit" | "apply" | null>(null);
   const [interviewTarget, setInterviewTarget] = useState<JobApplication | null>(null);
   const [error, setError] = useState("");
   const queryClient = useQueryClient();
+  useEffect(() => {
+    try { sessionStorage.setItem(JOB_FILTERS_KEY, JSON.stringify(filters)); } catch { /* Filtering still works for this session. */ }
+  }, [filters]);
+  function updateFilters(update: Partial<JobFilters>) { setFilters((previous) => ({ ...previous, ...update })); }
+  function saveJobDraft(next: JobDraft) {
+    setJobDraft(next);
+    try { sessionStorage.setItem(JOB_DRAFT_KEY, JSON.stringify(next)); } catch { /* Keep the form usable if storage is unavailable. */ }
+  }
   const { data: currentUser } = useCurrentUser();
   const listingQuery = useJobs(search, category, mine, { status, employmentType, remote });
   const detailQuery = useJob(listingId);
@@ -54,8 +67,14 @@ function JobMarketplacePage({ applicationsOnly }: { applicationsOnly: boolean })
   }
 
   const createMutation = useMutation({ mutationFn: service.createJob, onSuccess: async (created) => {
-    await refresh(created.id); setDialog(null); navigate(`${paths.jobs}/${created.id}`);
-  }, onError: () => setError("Could not publish the job. Check your details and try again.") });
+    await refresh(created.id); saveJobDraft({}); setDialog(null); navigate(`${paths.jobs}/${created.id}`);
+  }, onError: (problem: unknown) => {
+    const response = axios.isAxiosError(problem) ? problem.response?.data as { error?: { message?: string; details?: Array<{ field: string; message: string }> } } | undefined : undefined;
+    const details = response?.error?.details?.map((item) => `${item.field}: ${item.message}`).join(" ");
+    setError(details || response?.error?.message || (axios.isAxiosError(problem) && !problem.response
+      ? "You appear to be offline. Your job details are still here; reconnect and publish again."
+      : "Could not publish the job. Check your details and try again."));
+  } });
   const updateMutation = useMutation({ mutationFn: service.updateJob, onSuccess: async (updated) => {
     await refresh(updated.id); setDialog(null); setError("");
   }, onError: () => setError("Could not update this job.") });
@@ -66,6 +85,7 @@ function JobMarketplacePage({ applicationsOnly }: { applicationsOnly: boolean })
 
   function submitJobForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
     const form = new FormData(event.currentTarget);
     const minValue = String(form.get("budgetMin") ?? "").trim();
     const maxValue = String(form.get("budgetMax") ?? "").trim();
@@ -103,12 +123,12 @@ function JobMarketplacePage({ applicationsOnly }: { applicationsOnly: boolean })
 
   return <main className="min-h-screen bg-page px-4 py-8 sm:px-6"><div className="mx-auto max-w-6xl">
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-wider text-brand">SkillBridge marketplace</p><h1 className="mt-1 text-3xl font-bold text-navy">{applicationsOnly ? "My applications" : "Find your next opportunity"}</h1><p className="mt-2 text-sm text-muted">Explore opportunities and connect with teams looking for your skills.</p></div>{canPost && !applicationsOnly ? <button type="button" onClick={() => setDialog("create")} className={`${actionClass} bg-navy text-white`}><BriefcaseBusiness className="h-4 w-4" />Post a job</button> : null}</header>
-    {!applicationsOnly && !listingId ? <div className="mb-5 grid grid-cols-1 items-center gap-3 sm:flex sm:flex-wrap"><label className="relative min-w-0 flex-1 sm:min-w-52"><span className="sr-only">Search jobs</span><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input aria-label="Search jobs" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search jobs and skills" className="h-11 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm" /></label><select aria-label="Job category" value={category} onChange={(event) => setCategory(event.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm sm:w-auto"><option value="">All categories</option>{categories.map((item) => <option key={item} value={item}>{pretty(item)}</option>)}</select><select aria-label="Employment type" value={employmentType} onChange={(event) => setEmploymentType(event.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm sm:w-auto"><option value="">All work types</option>{kinds.map((item) => <option key={item} value={item}>{pretty(item)}</option>)}</select><select aria-label="Work location" value={remote} onChange={(event) => setRemote(event.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm sm:w-auto"><option value="">Remote or on-site</option><option value="true">Remote</option><option value="false">On-site</option></select><select aria-label="Listing status" value={mine ? "all" : status} onChange={(event) => setStatus(event.target.value)} disabled={mine} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm sm:w-auto"><option value="open">Open jobs</option><option value="closed">Closed jobs</option><option value="all">All jobs</option></select>{canPost ? <button type="button" onClick={() => setMine((value) => !value)} className={`${actionClass} w-full border border-line sm:w-auto ${mine ? "bg-brand/10 text-brand" : "bg-surface text-ink"}`}>{mine ? "Showing your jobs" : "My job listings"}</button> : null}{currentUser?.capabilities.includes("professional") ? <Link to={paths.jobApplications} className={`${actionClass} w-full border border-line bg-surface text-ink sm:w-auto`}>My applications</Link> : null}</div> : null}
+    {!applicationsOnly && !listingId ? <div className="mb-5 grid grid-cols-1 items-center gap-3 sm:flex sm:flex-wrap"><label className="relative min-w-0 flex-1 sm:min-w-52"><span className="sr-only">Search jobs</span><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input aria-label="Search jobs" value={search} onChange={(event) => updateFilters({ search: event.target.value })} placeholder="Search jobs and skills" className="h-11 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm" /></label><select aria-label="Job category" value={category} onChange={(event) => updateFilters({ category: event.target.value })} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm sm:w-auto"><option value="">All categories</option>{categories.map((item) => <option key={item} value={item}>{pretty(item)}</option>)}</select><select aria-label="Employment type" value={employmentType} onChange={(event) => updateFilters({ employmentType: event.target.value })} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm sm:w-auto"><option value="">All work types</option>{kinds.map((item) => <option key={item} value={item}>{pretty(item)}</option>)}</select><select aria-label="Work location" value={remote} onChange={(event) => updateFilters({ remote: event.target.value })} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm sm:w-auto"><option value="">Remote or on-site</option><option value="true">Remote</option><option value="false">On-site</option></select><select aria-label="Listing status" value={mine ? "all" : status} onChange={(event) => updateFilters({ status: event.target.value })} disabled={mine} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm sm:w-auto"><option value="open">Open jobs</option><option value="closed">Closed jobs</option><option value="all">All jobs</option></select>{canPost ? <button type="button" onClick={() => updateFilters({ mine: !mine })} className={`${actionClass} w-full border border-line sm:w-auto ${mine ? "bg-brand/10 text-brand" : "bg-surface text-ink"}`}>{mine ? "Showing your jobs" : "My job listings"}</button> : null}{currentUser?.capabilities.includes("professional") ? <Link to={paths.jobApplications} className={`${actionClass} w-full border border-line bg-surface text-ink sm:w-auto`}>My applications</Link> : null}</div> : null}
     {error ? <div role="alert" className="mb-4 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}<button type="button" onClick={() => setError("")} className="ml-3 underline">Dismiss</button></div> : null}
 
     {applicationsOnly ? <ApplicationsList rows={myApplications} loading={applicationsQuery.isPending} failed={applicationsQuery.isError} onRetry={() => void applicationsQuery.refetch()} /> : listingId ? <JobDetailPanel detail={detail} loading={detailQuery.isPending} failed={detailQuery.isError} retry={() => void detailQuery.refetch()} isOwner={Boolean(isOwner)} canApply={canApply} onBack={() => navigate(paths.jobs)} onApply={() => setDialog("apply")} onEdit={() => setDialog("edit")} onJobStatus={changeJobStatus} onStatus={submitStatus} onWithdraw={(application) => submitStatus(application, "withdrawn")} busy={applicationStatusMutation.isPending || updateMutation.isPending} /> : <JobsList rows={listingQuery.data ?? []} loading={listingQuery.isPending} failed={listingQuery.isError} retry={() => void listingQuery.refetch()} />}
 
-    {dialog === "create" || dialog === "edit" ? <JobFormDialog mode={dialog} job={detail ?? null} busy={createMutation.isPending || updateMutation.isPending} onClose={() => setDialog(null)} onSubmit={submitJobForm} /> : null}
+    {dialog === "create" || dialog === "edit" ? <JobFormDialog mode={dialog} job={detail ?? null} draft={jobDraft} onDraftChange={(form) => saveJobDraft({ title: String(form.get("title") ?? ""), description: String(form.get("description") ?? ""), category: String(form.get("category") ?? "technology"), employmentType: String(form.get("employmentType") ?? "contract"), budgetMin: String(form.get("budgetMin") ?? ""), budgetMax: String(form.get("budgetMax") ?? ""), currency: String(form.get("currency") ?? "USD"), location: String(form.get("location") ?? ""), isRemote: form.get("isRemote") === "on" })} busy={createMutation.isPending || updateMutation.isPending} onClose={() => setDialog(null)} onSubmit={submitJobForm} /> : null}
     {dialog === "apply" ? <ApplicationDialog busy={applyMutation.isPending} onClose={() => setDialog(null)} onSubmit={submitApplication} /> : null}
     {interviewTarget ? <InterviewScheduleDialog application={interviewTarget} busy={applicationStatusMutation.isPending} onClose={() => setInterviewTarget(null)} onSubmit={submitInterview} /> : null}
   </div></main>;
@@ -154,8 +174,13 @@ function InterviewScheduleDialog({ application, busy, onClose, onSubmit }: { app
   return <Dialog title={`Schedule interview with ${person(application.applicant)}`} onClose={onClose}><form onSubmit={onSubmit} className="space-y-4"><p className="text-sm text-muted">Accepting this application will send the interview details and a private call link to the applicant.</p><Field label="Date and time"><input name="scheduledAt" type="datetime-local" min={scheduleDefaults.minValue} defaultValue={scheduleDefaults.localValue} required className={controlClass} /></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="Call type"><select name="mode" className={controlClass}><option value="video">Video interview</option><option value="audio">Voice interview</option></select></Field><Field label="Duration"><select name="durationMinutes" defaultValue="30" className={controlClass}>{[15, 30, 45, 60, 90, 120, 180].map((minutes) => <option key={minutes} value={minutes}>{minutes} minutes</option>)}</select></Field></div><Field label="Notes for the applicant"><textarea name="notes" maxLength={1000} rows={3} className={controlClass} placeholder="Optional agenda or preparation notes" /></Field><div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className={`${actionClass} border border-line`}>Cancel</button><button type="submit" disabled={busy} className={`${actionClass} bg-success text-white`}>{busy ? "Accepting…" : "Accept & schedule"}</button></div></form></Dialog>;
 }
 
-function JobFormDialog({ mode, job, busy, onClose, onSubmit }: { mode: "create" | "edit"; job: JobDetail | null; busy: boolean; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }): ReactElement {
-  return <Dialog title={mode === "create" ? "Post a job" : "Edit job listing"} onClose={onClose}><form onSubmit={onSubmit} className="space-y-3"><Field label="Job title"><input name="title" required minLength={5} maxLength={140} defaultValue={job?.title} className={controlClass} placeholder="e.g. Frontend Engineer" /></Field><Field label="Description"><textarea name="description" required minLength={30} maxLength={8000} rows={5} defaultValue={job?.description} className={controlClass} placeholder="Describe the role, responsibilities, and qualifications." /></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="Category"><select name="category" defaultValue={job?.category ?? "technology"} className={controlClass}>{categories.map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</select></Field><Field label="Employment type"><select name="employmentType" defaultValue={job?.employmentType ?? "contract"} className={controlClass}>{kinds.map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</select></Field></div><div className="grid gap-3 sm:grid-cols-3"><Field label="Minimum budget"><input name="budgetMin" type="number" min="0.01" step="0.01" defaultValue={job?.budgetMin ?? ""} className={controlClass} /></Field><Field label="Maximum budget"><input name="budgetMax" type="number" min="0.01" step="0.01" defaultValue={job?.budgetMax ?? ""} className={controlClass} /></Field><Field label="Currency"><select name="currency" defaultValue={job?.currency ?? "USD"} className={controlClass}><option>USD</option><option>NGN</option><option>GBP</option><option>EUR</option></select></Field></div><Field label="Location"><input name="location" maxLength={120} defaultValue={job?.location ?? ""} className={controlClass} placeholder="City, country, or leave blank" /></Field><label className="flex items-center gap-2 text-sm"><input name="isRemote" type="checkbox" defaultChecked={job?.isRemote ?? true} />Remote work available</label><div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2"><button type="button" onClick={onClose} className={`${actionClass} border border-line`}>Cancel</button><button type="submit" disabled={busy} className={`${actionClass} bg-navy text-white`}>{busy ? "Saving…" : mode === "create" ? "Publish job" : "Save changes"}</button></div></form></Dialog>;
+function JobFormDialog({ mode, job, draft, onDraftChange, busy, onClose, onSubmit }: { mode: "create" | "edit"; job: JobDetail | null; draft: JobDraft; onDraftChange: (form: FormData) => void; busy: boolean; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }): ReactElement {
+  const value = (field: keyof JobDraft, fallback: string) => {
+    if (mode === "create") return String(draft[field] ?? fallback);
+    const jobValue = job?.[field as keyof JobDetail];
+    return jobValue == null ? fallback : String(jobValue);
+  };
+  return <Dialog title={mode === "create" ? "Post a job" : "Edit job listing"} onClose={onClose}><form onSubmit={onSubmit} onChange={(event) => { if (mode === "create") onDraftChange(new FormData(event.currentTarget)); }} className="space-y-3"><Field label="Job title"><input name="title" required minLength={5} maxLength={140} defaultValue={value("title", "")} className={controlClass} placeholder="e.g. Frontend Engineer" /></Field><Field label="Description"><textarea name="description" required minLength={30} maxLength={8000} rows={5} defaultValue={value("description", "")} className={controlClass} placeholder="Describe the role, responsibilities, and qualifications." /></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="Category"><select name="category" defaultValue={value("category", "technology")} className={controlClass}>{categories.map((item) => <option key={item} value={item}>{pretty(item)}</option>)}</select></Field><Field label="Employment type"><select name="employmentType" defaultValue={value("employmentType", "contract")} className={controlClass}>{kinds.map((item) => <option key={item} value={item}>{pretty(item)}</option>)}</select></Field></div><div className="grid gap-3 sm:grid-cols-3"><Field label="Minimum budget"><input name="budgetMin" type="number" min="0.01" step="0.01" defaultValue={value("budgetMin", "")} className={controlClass} /></Field><Field label="Maximum budget"><input name="budgetMax" type="number" min="0.01" step="0.01" defaultValue={value("budgetMax", "")} className={controlClass} /></Field><Field label="Currency"><select name="currency" defaultValue={value("currency", "USD")} className={controlClass}><option>USD</option><option>NGN</option><option>GBP</option><option>EUR</option></select></Field></div><Field label="Location"><input name="location" maxLength={120} defaultValue={value("location", "")} className={controlClass} placeholder="City, country, or leave blank" /></Field><label className="flex items-center gap-2 text-sm"><input name="isRemote" type="checkbox" defaultChecked={mode === "create" ? draft.isRemote ?? true : job?.isRemote ?? true} />Remote work available</label><div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2"><button type="button" onClick={onClose} className={`${actionClass} border border-line`}>Cancel</button><button type="submit" disabled={busy} className={`${actionClass} bg-navy text-white`}>{busy ? "Saving…" : mode === "create" ? "Publish job" : "Save changes"}</button></div></form></Dialog>;
 }
 
 function ApplicationDialog({ busy, onClose, onSubmit }: { busy: boolean; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }): ReactElement {

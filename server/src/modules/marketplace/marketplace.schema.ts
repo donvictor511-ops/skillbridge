@@ -18,7 +18,8 @@ const jobFieldsSchema = z.object({
   description: z.string().trim().min(30).max(8000),
   category: z.enum(categories),
   employmentType: z.enum(["full_time", "part_time", "contract", "internship"]),
-  location: z.string().trim().max(120).optional().transform((value) => value || null),
+  // The client sends null when the optional location field is left empty.
+  location: z.string().trim().max(120).nullable().optional().transform((value) => value || null),
   isRemote: z.boolean().default(true),
   budgetMin: amount.optional().nullable(),
   budgetMax: amount.optional().nullable(),
