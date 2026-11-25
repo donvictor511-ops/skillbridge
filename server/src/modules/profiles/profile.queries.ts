@@ -112,7 +112,7 @@ function byName(a: { name: string }, b: { name: string }): number {
 // Turns a database row into the PUBLIC response. Only listed fields get out.
 export function toPublicProfile(
   row: ProfileRow,
-  connectionCount: number,
+  social: { connectionCount: number; followerCount: number; followingCount: number; isFollowing: boolean },
 ): PublicProfile {
   const projects: ProfileProject[] = row.projects.map((project) => ({
     id: project.id,
@@ -158,7 +158,7 @@ export function toPublicProfile(
   return {
     userId: row.userId,
     joinedAt: row.user.createdAt.toISOString(),
-    connectionCount,
+    ...social,
     displayName: row.displayName,
     headline: row.headline,
     location: row.location,
@@ -196,10 +196,10 @@ export function toPublicProfile(
 // The OWNER sees everything public, plus the private parts.
 export function toOwnerProfile(
   row: ProfileRow,
-  connectionCount: number,
+  social: { connectionCount: number; followerCount: number; followingCount: number; isFollowing: boolean },
 ): OwnerProfile {
   return {
-    ...toPublicProfile(row, connectionCount),
+    ...toPublicProfile(row, social),
     visibility: row.visibility,
     goals: row.goals,
     allowCommunityInvites: row.allowCommunityInvites,

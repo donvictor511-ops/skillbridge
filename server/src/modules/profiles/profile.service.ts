@@ -16,13 +16,16 @@ export function profileNotFound(): AppError {
   return new AppError(404, "PROFILE_NOT_FOUND", "Profile not found.");
 }
 
-async function getAcceptedConnectionCount(userId: string): Promise<number> {
-  return prisma.connection.count({
-    where: {
-      status: "accepted",
-      OR: [{ userLowId: userId }, { userHighId: userId }],
-    },
-  });
+async function getSocialCounts(userId: string, viewerId?: string) {
+  const [connectionCount, followerCount, followingCount, relationship] = await Promise.all([
+    prisma.connection.count({ where: { status: "accepted", OR: [{ userLowId: userId }, { userHighId: userId }] } }),
+    prisma.follow.count({ where: { followedId: userId } }),
+    prisma.follow.count({ where: { followerId: userId } }),
+    viewerId && viewerId !== userId
+      ? prisma.follow.findUnique({ where: { followerId_followedId: { followerId: viewerId, followedId: userId } }, select: { followerId: true } })
+      : Promise.resolve(null),
+  ]);
+  return { connectionCount, followerCount, followingCount, isFollowing: relationship !== null };
 }
 
 // P2025 is Prisma's code for "the record to update does not exist".
@@ -43,9 +46,9 @@ export async function getOwnerProfile(userId: string): Promise<OwnerProfile> {
     throw profileNotFound();
   }
 
-  const connectionCount = await getAcceptedConnectionCount(userId);
+  const social = await getSocialCounts(userId);
 
-  return toOwnerProfile(row, connectionCount);
+  return toOwnerProfile(row, social);
 }
 
 // Someone's profile as the CURRENT VISITOR is allowed to see it.
@@ -83,9 +86,9 @@ export async function getProfileForViewer(
   }
 
   // The public shape is used even when the owner views their own page here.
-  const connectionCount = await getAcceptedConnectionCount(targetUserId);
+  const social = await getSocialCounts(targetUserId, viewer?.id);
 
-  return toPublicProfile(row, connectionCount);
+  return toPublicProfile(row, social);
 }
 
 // Updates the basics of the CURRENT USER's profile. The user id comes from the

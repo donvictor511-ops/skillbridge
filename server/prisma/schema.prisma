@@ -245,6 +245,8 @@ model User {
   connectionsLow          Connection[]              @relation("ConnectionLowUser")
   connectionsHigh         Connection[]              @relation("ConnectionHighUser")
   connectionRequests      Connection[]              @relation("ConnectionRequester")
+  following               Follow[]                  @relation("UserFollowing")
+  followers               Follow[]                  @relation("UserFollowers")
   notificationsReceived   Notification[]            @relation("NotificationRecipient")
   notificationsSent       Notification[]            @relation("NotificationActor")
   posts                   Post[]
@@ -680,6 +682,20 @@ model Connection {
   @@index([userHighId, status])
   @@index([requestedById])
   @@map("connections")
+}
+
+model Follow {
+  followerId String   @map("follower_id") @db.Uuid
+  followedId String   @map("followed_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  follower User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  followed User @relation("UserFollowers", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followedId])
+  @@index([followedId, createdAt])
+  @@index([followerId, createdAt])
+  @@map("follows")
 }
 
 model Notification {

@@ -22,6 +22,7 @@ import { adminRouter } from "./modules/admin/admin.routes";
 import { moderationRouter } from "./modules/moderation/moderation.routes";
 import { callsRouter } from "./modules/calls/calls.routes";
 import { searchRouter } from "./modules/search/search.routes";
+import { followsRouter } from "./modules/follows/follows.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -56,6 +57,7 @@ export function createApp(): Express {
   app.use("/api/v1/profiles", profileRouter);
   app.use("/api/v1/discover", discoverRouter);
   app.use("/api/v1/connections", connectionsRouter);
+  app.use("/api/v1/follows", followsRouter);
   app.use("/api/v1/notifications", notificationsRouter);
   app.use("/api/v1/posts", postsRouter);
   app.use("/api/v1/messages", messagesRouter);
