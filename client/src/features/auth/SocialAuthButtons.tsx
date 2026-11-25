@@ -1,13 +1,30 @@
 import type { ReactElement } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import { ErrorMessage } from "../../components/ui";
-import { apiBaseURL } from "../../services/apiClient";
+import { apiBaseURL, apiClient } from "../../services/apiClient";
+
+interface OAuthProviders {
+  google: boolean;
+  linkedin: boolean;
+}
 
 export function SocialAuthButtons(): ReactElement {
   const [searchParams] = useSearchParams();
   const oauthError = searchParams.get("oauthError");
+  const { data: providers } = useQuery({
+    queryKey: ["auth", "oauth-providers"],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: OAuthProviders }>("/auth/oauth/providers");
+      return response.data.data;
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
   const startUrl = (provider: "google" | "linkedin") =>
     `${apiBaseURL.replace(/\/$/, "")}/auth/oauth/${provider}`;
+
+  if (!providers?.google && !providers?.linkedin && !oauthError) return <div className="mb-6" />;
 
   return (
     <div className="mb-6 space-y-4">
@@ -18,7 +35,7 @@ export function SocialAuthButtons(): ReactElement {
         />
       ) : null}
       <div className="space-y-3">
-        <a
+        {providers?.google ? <a
           href={startUrl("google")}
           className="flex min-h-12 w-full items-center justify-center gap-3 rounded-control border border-line bg-surface px-4 text-sm font-semibold text-ink transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
@@ -29,8 +46,8 @@ export function SocialAuthButtons(): ReactElement {
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.9-5.8l-7.73-6c-2.14 1.44-4.87 2.3-8.17 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z" transform="translate(0 -4)" />
           </svg>
           Continue with Google
-        </a>
-        <a
+        </a> : null}
+        {providers?.linkedin ? <a
           href={startUrl("linkedin")}
           className="flex min-h-12 w-full items-center justify-center gap-3 rounded-control border border-line bg-surface px-4 text-sm font-semibold text-ink transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
@@ -38,7 +55,7 @@ export function SocialAuthButtons(): ReactElement {
             <path d="M20.45 2H3.55C2.69 2 2 2.68 2 3.52v16.96c0 .84.69 1.52 1.55 1.52h16.9c.86 0 1.55-.68 1.55-1.52V3.52c0-.84-.69-1.52-1.55-1.52ZM8.05 18.35H5.1V9.4h2.95v8.95ZM6.57 8.18a1.71 1.71 0 1 1 .02-3.42 1.71 1.71 0 0 1-.02 3.42Zm12.28 10.17H15.9V14c0-1.04-.02-2.38-1.45-2.38-1.45 0-1.67 1.13-1.67 2.3v4.43H9.84V9.4h2.82v1.22h.04c.39-.7 1.35-1.44 2.78-1.44 2.97 0 3.52 1.95 3.52 4.49v4.68h-.15Z" />
           </svg>
           Continue with LinkedIn
-        </a>
+        </a> : null}
       </div>
       <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-muted">
         <span className="h-px flex-1 bg-line" />

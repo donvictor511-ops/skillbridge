@@ -53,7 +53,7 @@ Links expire after 30 minutes. Configure `BREVO_API_KEY` and `BREVO_FROM_EMAIL` 
 
 ### Social sign-in
 
-`GET /auth/oauth/:provider` starts Google or LinkedIn sign-in; the provider redirects to `/auth/oauth/:provider/callback`. Configure provider credentials and callback URLs as described in `docs/social-sign-in.md`.
+`GET /auth/oauth/providers` lists which social providers are configured. `GET /auth/oauth/:provider` starts Google or LinkedIn sign-in; the provider redirects to `/auth/oauth/:provider/callback`. Configure provider credentials and callback URLs as described in `docs/social-sign-in.md`.
 on the API service.
 
 ## POST /auth/password-reset/complete

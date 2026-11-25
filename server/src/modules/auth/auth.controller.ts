@@ -9,7 +9,11 @@ import { accountAppealSchema, loginSchema, passwordResetRequestSchema, passwordR
 import { loginUser, registerUser, submitAccountAppeal } from "./auth.service";
 import { createSession, deleteSessionByToken } from "./session.service";
 import { requestPasswordReset, resetPassword } from "./passwordReset.service";
-import { beginOAuth, completeOAuth, isOAuthProvider, oauthFailureUrl, oauthSuccessUrl } from "./oauth.service";
+import { beginOAuth, completeOAuth, getOAuthAvailability, isOAuthProvider, oauthFailureUrl, oauthSuccessUrl } from "./oauth.service";
+
+export function oauthProviders(_req: Request, res: Response): void {
+  res.status(200).json({ data: getOAuthAvailability() });
+}
 
 export function startOAuth(req: Request, res: Response): void {
   const providerParam = req.params.provider;

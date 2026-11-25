@@ -35,6 +35,13 @@ export function isOAuthProvider(value: string): value is OAuthProviderName {
   return value === "google" || value === "linkedin";
 }
 
+export function getOAuthAvailability(): Record<OAuthProviderName, boolean> {
+  return {
+    google: Boolean(env.googleClientId && env.googleClientSecret),
+    linkedin: Boolean(env.linkedinClientId && env.linkedinClientSecret),
+  };
+}
+
 export function beginOAuth(
   req: Request,
   res: Response,
