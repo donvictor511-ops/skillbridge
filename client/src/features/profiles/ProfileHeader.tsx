@@ -105,6 +105,12 @@ export function ProfileHeader({ profile }: ProfileHeaderProps): ReactElement {
               {profile.connectionCount === 1 ? "connection" : "connections"}
             </span>
           </span>
+          <span aria-label={`${profile.followerCount} followers`}>
+            {profile.followerCount} {profile.followerCount === 1 ? "follower" : "followers"}
+          </span>
+          <span aria-label={`${profile.followingCount} following`}>
+            {profile.followingCount} following
+          </span>
         </div>
 
         {profile.accountTypes.length > 0 ? (

@@ -13,13 +13,16 @@ import {
   useRejectConnectionRequest,
   useRemoveConnection,
 } from "../connections/connectionsQueries";
+import { useFollowUser, useUnfollowUser } from "../follows/followsQueries";
 
 interface ProfileConnectionActionsProps {
   profileUserId: string;
+  isFollowing: boolean;
 }
 
 export function ProfileConnectionActions({
   profileUserId,
+  isFollowing,
 }: ProfileConnectionActionsProps): ReactElement | null {
   const queryClient = useQueryClient();
 
@@ -32,6 +35,8 @@ export function ProfileConnectionActions({
   const acceptRequest = useAcceptConnectionRequest();
   const rejectRequest = useRejectConnectionRequest();
   const removeConnection = useRemoveConnection();
+  const follow = useFollowUser(profileUserId);
+  const unfollow = useUnfollowUser(profileUserId);
 
   const connection = connections.find(
     (item) => item.user.userId === profileUserId,
@@ -41,7 +46,9 @@ export function ProfileConnectionActions({
     sendRequest.isPending ||
     acceptRequest.isPending ||
     rejectRequest.isPending ||
-    removeConnection.isPending;
+    removeConnection.isPending ||
+    follow.isPending ||
+    unfollow.isPending;
 
   async function refreshProfileData() {
     await Promise.all([
@@ -110,6 +117,26 @@ export function ProfileConnectionActions({
     </Link>
   );
 
+  const followButton = (
+    <Button
+      variant={isFollowing ? "secondary" : "primary"}
+      onClick={() => (isFollowing ? unfollow.mutate() : follow.mutate())}
+      loading={follow.isPending || unfollow.isPending}
+      disabled={isMutating}
+      aria-label={isFollowing ? "Unfollow this member" : "Follow this member"}
+      aria-pressed={isFollowing}
+    >
+      {isFollowing ? <Check className="h-4 w-4" aria-hidden="true" /> : <UserPlus className="h-4 w-4" aria-hidden="true" />}
+      {isFollowing ? "Following" : "Follow"}
+    </Button>
+  );
+
+  const followError = follow.isError || unfollow.isError ? (
+    <p className="w-full text-sm text-danger" role="alert">
+      Could not update follow status. Please try again.
+    </p>
+  ) : null;
+
   // Wait for the authenticated user's connection list.
   if (connectionsLoading) {
     return (
@@ -131,6 +158,7 @@ export function ProfileConnectionActions({
           <UserPlus className="h-4 w-4" aria-hidden="true" />
           Connect
         </Button>
+        {followButton}
         {messageLink}
 
         {sendRequest.isError ? (
@@ -138,6 +166,7 @@ export function ProfileConnectionActions({
             Could not send connection request. Please try again.
           </p>
         ) : null}
+        {followError}
       </div>
     );
   }
@@ -146,6 +175,7 @@ export function ProfileConnectionActions({
   if (connection.status === "accepted") {
     return (
       <div className="mt-5 flex flex-wrap items-center gap-3">
+        {followButton}
         <span className="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-2 text-sm font-medium text-success">
           <Check className="h-4 w-4" aria-hidden="true" />
           Connected
@@ -168,6 +198,7 @@ export function ProfileConnectionActions({
             Could not remove connection. Please try again.
           </p>
         ) : null}
+        {followError}
       </div>
     );
   }
@@ -176,6 +207,7 @@ export function ProfileConnectionActions({
   if (connection.status === "pending" && connection.direction === "outgoing") {
     return (
       <div className="mt-5 flex flex-wrap items-center gap-3">
+        {followButton}
         <span className="inline-flex items-center gap-2 rounded-full bg-warning/10 px-3 py-2 text-sm font-medium text-muted">
           <Clock className="h-4 w-4" aria-hidden="true" />
           Request pending
@@ -197,6 +229,7 @@ export function ProfileConnectionActions({
             Could not cancel request. Please try again.
           </p>
         ) : null}
+        {followError}
       </div>
     );
   }
@@ -205,6 +238,7 @@ export function ProfileConnectionActions({
   if (connection.status === "pending" && connection.direction === "incoming") {
     return (
       <div className="mt-5 flex flex-wrap items-center gap-3">
+        {followButton}
         <span className="inline-flex items-center gap-2 rounded-full bg-warning/10 px-3 py-2 text-sm font-medium text-muted">
           <Clock className="h-4 w-4" aria-hidden="true" />
           Received connection request
@@ -237,6 +271,7 @@ export function ProfileConnectionActions({
             Could not update request. Please try again.
           </p>
         ) : null}
+        {followError}
       </div>
     );
   }
@@ -244,6 +279,7 @@ export function ProfileConnectionActions({
   // Rejected request.
   return (
     <div className="mt-5 flex flex-wrap items-center gap-3">
+      {followButton}
       <span className="inline-flex items-center gap-2 rounded-full bg-page px-3 py-2 text-sm font-medium text-muted">
         Request rejected
       </span>
@@ -264,6 +300,7 @@ export function ProfileConnectionActions({
           Could not remove previous request. Please try again.
         </p>
       ) : null}
+      {followError}
     </div>
   );
 }

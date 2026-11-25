@@ -72,7 +72,7 @@ export function ProfileView({
       <ProfileHeader profile={profile} />
 
       {!isOwner ? (
-        <ProfileConnectionActions profileUserId={profile.userId} />
+        <ProfileConnectionActions profileUserId={profile.userId} isFollowing={profile.isFollowing} />
       ) : null}
 
       <AboutSection
