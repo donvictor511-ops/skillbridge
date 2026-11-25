@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactElement } from "react";
+import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ZodType } from "zod";
 import { Button, Card, ErrorMessage } from "../../components/ui";
@@ -8,10 +9,13 @@ import { focusFirstInvalidField } from "../../lib/forms";
 import { toFieldErrors } from "../../lib/zodErrors";
 import { uploadProfileImage } from "../../services/profileService";
 import type { OnboardingInput } from "../../types/onboarding";
-import { authKeys } from "../auth/authQueries";
+import { authKeys, useCurrentUser } from "../auth/authQueries";
 import { AboutYouStep } from "./AboutYouStep";
 import { AccountTypeStep } from "./AccountTypeStep";
-import { useCompleteOnboarding } from "./onboardingQueries";
+import {
+  onboardingDraftStorageKey,
+  useCompleteOnboarding,
+} from "./onboardingQueries";
 import {
   aboutYouSchema,
   accountTypeSchema,
@@ -77,6 +81,25 @@ const initialShowcaseDraft: ShowcaseDraft = {
   projectSkills: [],
 };
 
+const savedDraftSchema = z.object({
+  step: z.number().int().min(0).max(LAST_STEP),
+  values: z.object({
+    capabilities: z.array(z.enum(["professional", "client"])),
+    displayName: z.string(),
+    headline: z.string(),
+    location: z.string(),
+    skills: z.array(z.string()),
+    interests: z.array(z.string()),
+    goals: z.array(z.string()),
+  }),
+  showcaseDraft: z.object({
+    projectTitle: z.string(),
+    projectDescription: z.string(),
+    projectUrl: z.string(),
+    projectSkills: z.array(z.string()),
+  }),
+});
+
 // The server reports array problems like "skills.2". We only need "skills".
 function toTopLevelErrors(
   fieldErrors: Record<string, string>,
@@ -95,7 +118,9 @@ function toTopLevelErrors(
 
 export function OnboardingWizard(): ReactElement {
   const queryClient = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
   const completeMutation = useCompleteOnboarding();
+  const draftKey = currentUser?.id ? onboardingDraftStorageKey(currentUser.id) : null;
 
   const [step, setStep] = useState<number>(0);
   const [values, setValues] = useState<OnboardingInput>(initialValues);
@@ -105,6 +130,39 @@ export function OnboardingWizard(): ReactElement {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [draftLoadedFor, setDraftLoadedFor] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!draftKey) return;
+
+    try {
+      const savedDraft = window.sessionStorage.getItem(draftKey);
+      if (savedDraft) {
+        const parsed = savedDraftSchema.safeParse(JSON.parse(savedDraft));
+        if (parsed.success) {
+          setStep(parsed.data.step);
+          setValues(parsed.data.values);
+          setShowcaseDraft(parsed.data.showcaseDraft);
+        }
+      }
+    } catch {
+      // Keep the setup usable if storage is unavailable or contains bad data.
+    }
+    setDraftLoadedFor(draftKey);
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || draftLoadedFor !== draftKey) return;
+
+    try {
+      window.sessionStorage.setItem(
+        draftKey,
+        JSON.stringify({ step, values, showcaseDraft }),
+      );
+    } catch {
+      // Storage can be disabled or full; setup still works for this visit.
+    }
+  }, [draftKey, draftLoadedFor, step, values, showcaseDraft]);
 
   // When the step changes, move focus to its heading so screen reader and
   // keyboard users know where they are.
@@ -249,6 +307,9 @@ export function OnboardingWizard(): ReactElement {
       <p className="mt-2 text-muted">
         A few quick questions so SkillBridge fits you. It takes about two
         minutes.
+      </p>
+      <p className="mt-2 text-sm text-muted">
+        Your answers and current step are restored if you refresh this tab.
       </p>
 
       <Card padding="lg" className="mt-6">

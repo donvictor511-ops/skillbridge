@@ -97,6 +97,7 @@ function formatPost(
   isRepostedByViewer = false,
   reactionCounts: Record<ReactionType, number> = emptyReactionCounts(),
   viewerReaction: ReactionType | null = null,
+  isFollowedByViewer = false,
 ) {
   const source = post.repostOf;
   const originalAuthor = source?.author;
@@ -113,6 +114,7 @@ function formatPost(
       displayName: post.author.profile?.displayName ?? "Unavailable profile",
       headline: post.author.profile?.headline ?? null,
       avatarUrl: post.author.profile?.avatarUrl ?? null,
+      isFollowedByViewer,
     },
     repostOf: source && originalAuthor ? {
       id: source.id,
@@ -236,7 +238,7 @@ export async function listPosts(
   const page = posts.slice(0, query.limit);
 
   const postIds = page.map((post) => post.id);
-  const [viewerReactions, groupedReactions] = postIds.length ? await Promise.all([
+  const [viewerReactions, groupedReactions, followedAuthors] = postIds.length ? await Promise.all([
     viewer ? prisma.postLike.findMany({
         where: {
           userId: viewer.id,
@@ -245,7 +247,8 @@ export async function listPosts(
         select: { postId: true, reactionType: true },
       }) : Promise.resolve([]),
     prisma.postLike.groupBy({ by: ["postId", "reactionType"], where: { postId: { in: postIds } }, _count: { _all: true } }),
-  ]) : [[], []];
+    viewer ? prisma.follow.findMany({ where: { followerId: viewer.id, followedId: { in: page.map((post) => post.authorId) } }, select: { followedId: true } }) : Promise.resolve([]),
+  ]) : [[], [], []];
 
   const sourceIds = page.map((post) => post.repostOf?.id ?? post.id);
   const repostedPostIds = viewer && sourceIds.length > 0
@@ -263,6 +266,7 @@ export async function listPosts(
     if (counts) counts[reaction.reactionType] = reaction._count._all;
   }
   const repostedPostIdSet = new Set(repostedPostIds.map((repost) => repost.repostOfId));
+  const followedAuthorIds = new Set(followedAuthors.map((follow) => follow.followedId));
 
   return {
     data: page.map((post) => formatPost(
@@ -271,6 +275,7 @@ export async function listPosts(
       repostedPostIdSet.has(post.repostOf?.id ?? post.id),
       reactionsByPost.get(post.id),
       viewerReactionByPost.get(post.id) ?? null,
+      followedAuthorIds.has(post.author.id),
     )),
     nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null,
   };
@@ -302,17 +307,18 @@ export async function listProfilePosts(authorId: string, viewer: AuthUser | unde
   const hasMore = posts.length > query.limit;
   const page = posts.slice(0, query.limit);
   const ids = page.map((post) => post.id);
-  const [reactions, grouped, reposted] = ids.length ? await Promise.all([
+  const [reactions, grouped, reposted, authorFollow] = ids.length ? await Promise.all([
     viewer ? prisma.postLike.findMany({ where: { userId: viewer.id, postId: { in: ids } }, select: { postId: true, reactionType: true } }) : Promise.resolve([]),
     prisma.postLike.groupBy({ by: ["postId", "reactionType"], where: { postId: { in: ids } }, _count: { _all: true } }),
     viewer ? prisma.post.findMany({ where: { authorId: viewer.id, repostOfId: { in: ids } }, select: { repostOfId: true } }) : Promise.resolve([]),
-  ]) : [[], [], []];
+    viewer && viewer.id !== authorId ? prisma.follow.findUnique({ where: { followerId_followedId: { followerId: viewer.id, followedId: authorId } }, select: { followerId: true } }) : Promise.resolve(null),
+  ]) : [[], [], [], null];
   const byPost = new Map<string, Record<ReactionType, number>>();
   for (const id of ids) byPost.set(id, emptyReactionCounts());
   for (const row of grouped) { const count = byPost.get(row.postId); if (count) count[row.reactionType] = row._count._all; }
   const viewerReaction = new Map(reactions.map((row) => [row.postId, row.reactionType]));
   const repostedIds = new Set(reposted.map((row) => row.repostOfId).filter((id): id is string => Boolean(id)));
-  return { data: page.map((post) => formatPost(post, viewerReaction.get(post.id) === "like", repostedIds.has(post.id), byPost.get(post.id), viewerReaction.get(post.id) ?? null)), nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null };
+  return { data: page.map((post) => formatPost(post, viewerReaction.get(post.id) === "like", repostedIds.has(post.id), byPost.get(post.id), viewerReaction.get(post.id) ?? null, Boolean(authorFollow))), nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null };
 }
 
 export async function createPost(authorId: string, input: CreatePostInput) {

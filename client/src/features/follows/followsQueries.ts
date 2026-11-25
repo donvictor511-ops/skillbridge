@@ -10,6 +10,9 @@ export function useFollowUser(userId: string) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: profileKeys.detail(userId) }),
         queryClient.invalidateQueries({ queryKey: profileKeys.me }),
+        queryClient.invalidateQueries({ queryKey: ["posts", "feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["profiles", "posts"] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }),
       ]);
     },
   });
@@ -23,6 +26,9 @@ export function useUnfollowUser(userId: string) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: profileKeys.detail(userId) }),
         queryClient.invalidateQueries({ queryKey: profileKeys.me }),
+        queryClient.invalidateQueries({ queryKey: ["posts", "feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["profiles", "posts"] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }),
       ]);
     },
   });

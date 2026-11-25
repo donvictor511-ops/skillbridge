@@ -3,6 +3,7 @@ export interface PostAuthor {
   displayName: string;
   headline: string | null;
   avatarUrl: string | null;
+  isFollowedByViewer?: boolean;
 }
 
 export type PostReaction = "like" | "love" | "celebrate" | "support" | "insightful";

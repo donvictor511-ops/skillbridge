@@ -43,6 +43,7 @@ enum ConnectionStatus {
 }
 
 enum NotificationType {
+  follow
   connection_request
   connection_accepted
   post_like

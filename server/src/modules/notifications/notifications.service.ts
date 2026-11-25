@@ -3,6 +3,7 @@ import type { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../utils/appError";
 
 export type NotificationKind =
+  | "follow"
   | "connection_request"
   | "connection_accepted"
   | "post_like"
@@ -65,7 +66,7 @@ export async function createNotification(input: CreateNotificationInput) {
 }
 
 export async function listNotifications(userId: string) {
-  return prisma.notification.findMany({
+  const notifications = await prisma.notification.findMany({
     where: { recipientId: userId },
     orderBy: { createdAt: "desc" },
     select: {
@@ -84,9 +85,24 @@ export async function listNotifications(userId: string) {
               avatarUrl: true,
             },
           },
+          followers: {
+            where: { followerId: userId },
+            select: { followerId: true },
+          },
         },
       },
     },
+  });
+
+  return notifications.map(({ actor, ...notification }) => {
+    const { followers, ...actorData } = actor;
+    return {
+      ...notification,
+      actor: {
+        ...actorData,
+        isFollowedByViewer: followers.length > 0,
+      },
+    };
   });
 }
 

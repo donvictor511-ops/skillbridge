@@ -21,6 +21,7 @@ import {
 } from "./postsQueries";
 import { CommentSection } from "./CommentSection";
 import { ContentReportButton } from "./ContentReportButton";
+import { FollowToggleButton } from "../follows/FollowToggleButton";
 
 import type { Post, PostReaction } from "./posts.types";
 
@@ -249,6 +250,13 @@ export function PostCard({ post }: PostCardProps) {
               {post.updatedAt !== post.createdAt && " · Edited"}
             </time>
           </div>
+
+          {!isOwner && currentUserQuery.data?.onboardedAt ? (
+            <FollowToggleButton
+              userId={post.author.userId}
+              isFollowing={post.author.isFollowedByViewer ?? false}
+            />
+          ) : null}
 
           {isOwner && (
             <div className="flex shrink-0 items-center gap-2">

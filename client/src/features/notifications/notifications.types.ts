@@ -1,4 +1,5 @@
 export type NotificationType =
+  | "follow"
   | "connection_request"
   | "connection_accepted"
   | "post_like"
@@ -21,6 +22,7 @@ export type NotificationType =
 
 export interface NotificationActor {
   id: string;
+  isFollowedByViewer: boolean;
   profile: {
     displayName: string | null;
     avatarUrl: string | null;

@@ -16,6 +16,7 @@ import {
   useUnreadNotificationCount,
 } from "./notificationsQueries";
 import type { Notification } from "./notifications.types";
+import { FollowToggleButton } from "../follows/FollowToggleButton";
 
 function formatNotificationDate(date: string): string {
   const notificationDate = new Date(date);
@@ -68,7 +69,8 @@ function NotificationItem({
       >
         <span className="min-w-0 flex-1">
           <span className="block text-sm text-ink">
-            {notification.type === "post_like" ||
+            {notification.type === "follow" ||
+            notification.type === "post_like" ||
             notification.type === "post_comment" ||
             notification.type === "post_shared" ||
             notification.type === "community_post" ||
@@ -95,6 +97,14 @@ function NotificationItem({
           />
         )}
       </button>
+
+      {notification.type === "follow" ? (
+        <FollowToggleButton
+          userId={notification.actor.id}
+          isFollowing={notification.actor.isFollowedByViewer}
+          followLabel="Follow back"
+        />
+      ) : null}
 
       {!notification.isRead && (
         <button
@@ -185,6 +195,10 @@ export function NotificationBell(): ReactElement {
     }
     if (notification.type === "community_invite") {
       navigate(paths.communities);
+      return;
+    }
+    if (notification.type === "follow") {
+      navigate(profilePath(notification.actor.id));
       return;
     }
     if (notification.type === "moderation_report") {

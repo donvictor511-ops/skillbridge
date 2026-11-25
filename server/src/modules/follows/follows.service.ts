@@ -18,12 +18,37 @@ export async function followUser(followerId: string, followedId: string) {
     throw new AppError(404, "USER_NOT_AVAILABLE", "This user is not available to follow.");
   }
 
-  return prisma.follow.upsert({
-    where: { followerId_followedId: { followerId, followedId } },
-    create: { followerId, followedId },
-    update: {},
-    select: { followerId: true, followedId: true, createdAt: true },
-  });
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const follow = await tx.follow.create({
+        data: { followerId, followedId },
+        select: { followerId: true, followedId: true, createdAt: true },
+      });
+
+      await tx.notification.create({
+        data: {
+          recipientId: followedId,
+          actorId: followerId,
+          type: "follow",
+          message: "started following you.",
+        },
+      });
+
+      return follow;
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return prisma.follow.findUniqueOrThrow({
+        where: { followerId_followedId: { followerId, followedId } },
+        select: { followerId: true, followedId: true, createdAt: true },
+      });
+    }
+    throw error;
+  }
 }
 
 export async function unfollowUser(followerId: string, followedId: string): Promise<void> {
