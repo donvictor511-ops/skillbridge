@@ -18,6 +18,8 @@ import {
 import type { Notification } from "./notifications.types";
 import { FollowToggleButton } from "../follows/FollowToggleButton";
 
+const NOTIFICATION_REFRESH_INTERVAL_MS = 5_000;
+
 function formatNotificationDate(date: string): string {
   const notificationDate = new Date(date);
 
@@ -143,9 +145,12 @@ export function NotificationBell(): ReactElement {
     data: notifications,
     isLoading,
     isError,
-  } = useNotifications(true, 30_000);
+  } = useNotifications(true, NOTIFICATION_REFRESH_INTERVAL_MS);
 
-  const { data: unreadCount = 0 } = useUnreadNotificationCount(true, 30_000);
+  const { data: unreadCount = 0 } = useUnreadNotificationCount(
+    true,
+    NOTIFICATION_REFRESH_INTERVAL_MS,
+  );
 
   const markAsReadMutation = useMarkNotificationAsRead();
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
