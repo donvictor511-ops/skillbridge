@@ -56,6 +56,9 @@ export interface PublicProfile {
   userId: string;
   joinedAt: string;
   connectionCount: number;
+  followerCount: number;
+  followingCount: number;
+  isFollowing: boolean;
   displayName: string;
   headline: string | null;
   location: string | null;
