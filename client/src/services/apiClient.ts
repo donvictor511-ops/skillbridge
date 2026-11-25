@@ -1,8 +1,9 @@
 import axios from "axios";
 import type { AxiosInstance } from "axios";
 
-export const apiBaseURL: string =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api/v1";
+export const apiBaseURL: string = import.meta.env.PROD
+  ? "/api/v1"
+  : import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
 // The one shared Axios instance. All API calls in the app go through
 // service files that import this client, never directly from components.
