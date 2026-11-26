@@ -35,6 +35,10 @@ function requestError(error: unknown): string {
   return error instanceof Error ? error.message : "Please try again.";
 }
 
+function TypingDots() {
+  return <span aria-hidden="true" className="inline-flex items-center gap-0.5 text-brand"><span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-0.2s]" /><span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-0.1s]" /><span className="h-1 w-1 animate-bounce rounded-full bg-current" /></span>;
+}
+
 export function MessagesPage(): ReactElement {
   useDocumentTitle("Messages | SkillBridge");
   const [params, setParams] = useSearchParams();
@@ -43,7 +47,8 @@ export function MessagesPage(): ReactElement {
   const selectedId = params.get("conversationId") ?? "";
   const [archived, setArchived] = useState(false);
   const [draft, setDraft] = useState("");
-  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [typingConversationIds, setTypingConversationIds] = useState<Set<string>>(() => new Set());
+  const typingConversationIdsRef = useRef<Set<string>>(new Set());
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -71,8 +76,11 @@ export function MessagesPage(): ReactElement {
   const bottomRef = useRef<HTMLDivElement>(null);
   const historyPaneRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<number | null>(null);
-  const typingExpiryRef = useRef<number | null>(null);
+  const typingExpiryRef = useRef<Map<string, number>>(new Map());
   const localTypingRef = useRef(false);
+  const typingAudioRef = useRef<AudioContext | null>(null);
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   const { data: user } = useCurrentUser();
   const list = useConversations(archived);
@@ -139,26 +147,67 @@ export function MessagesPage(): ReactElement {
 
   const conversation = detail.data ?? conversations.find((item) => item.id === selectedId);
 
+  const otherUserTyping = typingConversationIds.has(selectedId);
+
   useEffect(() => {
-    setOtherUserTyping(false);
     function onTyping(event: Event) {
       const detail = (event as CustomEvent<{ conversationId: string; userId: string; isTyping: boolean }>).detail;
-      if (detail.conversationId !== selectedId || detail.userId === user?.id) return;
-      setOtherUserTyping(detail.isTyping);
-      if (typingExpiryRef.current !== null) window.clearTimeout(typingExpiryRef.current);
-      if (detail.isTyping) typingExpiryRef.current = window.setTimeout(() => setOtherUserTyping(false), 2600);
+      if (detail.userId === user?.id) return;
+      const wasTyping = typingConversationIdsRef.current.has(detail.conversationId);
+      if (detail.isTyping) {
+        typingConversationIdsRef.current.add(detail.conversationId);
+        setTypingConversationIds(new Set(typingConversationIdsRef.current));
+        if (!wasTyping) {
+          const audio = typingAudioRef.current;
+          if (audio?.state === "running") {
+            const oscillator = audio.createOscillator();
+            const gain = audio.createGain();
+            oscillator.frequency.value = 740;
+            gain.gain.setValueAtTime(0.035, audio.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.09);
+            oscillator.connect(gain);
+            gain.connect(audio.destination);
+            oscillator.start();
+            oscillator.stop(audio.currentTime + 0.09);
+          }
+        }
+        const previousTimer = typingExpiryRef.current.get(detail.conversationId);
+        if (previousTimer !== undefined) window.clearTimeout(previousTimer);
+        typingExpiryRef.current.set(detail.conversationId, window.setTimeout(() => {
+          typingConversationIdsRef.current.delete(detail.conversationId);
+          setTypingConversationIds(new Set(typingConversationIdsRef.current));
+          typingExpiryRef.current.delete(detail.conversationId);
+        }, 2600));
+      } else {
+        const timer = typingExpiryRef.current.get(detail.conversationId);
+        if (timer !== undefined) window.clearTimeout(timer);
+        typingExpiryRef.current.delete(detail.conversationId);
+        typingConversationIdsRef.current.delete(detail.conversationId);
+        setTypingConversationIds(new Set(typingConversationIdsRef.current));
+      }
+    }
+    function unlockTypingSound() {
+      if (!typingAudioRef.current && window.AudioContext) typingAudioRef.current = new AudioContext();
+      if (typingAudioRef.current?.state === "suspended") void typingAudioRef.current.resume();
     }
     window.addEventListener("skillbridge:message-typing", onTyping);
+    document.addEventListener("pointerdown", unlockTypingSound, { once: true });
+    document.addEventListener("keydown", unlockTypingSound, { once: true });
     return () => {
       window.removeEventListener("skillbridge:message-typing", onTyping);
-      if (typingExpiryRef.current !== null) window.clearTimeout(typingExpiryRef.current);
+      document.removeEventListener("pointerdown", unlockTypingSound);
+      document.removeEventListener("keydown", unlockTypingSound);
+      for (const timer of typingExpiryRef.current.values()) window.clearTimeout(timer);
+      typingExpiryRef.current.clear();
       if (typingTimerRef.current !== null) window.clearTimeout(typingTimerRef.current);
-      if (localTypingRef.current && selectedId) {
-        void sendTypingStatus(selectedId, false).catch(() => undefined);
+      void typingAudioRef.current?.close();
+      typingAudioRef.current = null;
+      if (localTypingRef.current && selectedIdRef.current) {
+        void sendTypingStatus(selectedIdRef.current, false).catch(() => undefined);
         localTypingRef.current = false;
       }
     };
-  }, [selectedId, user?.id]);
+  }, [user?.id]);
 
   function stopTyping() {
     if (typingTimerRef.current !== null) window.clearTimeout(typingTimerRef.current);
@@ -277,16 +326,18 @@ export function MessagesPage(): ReactElement {
                 <div className="p-6 text-center text-sm text-muted">No conversations yet. Visit a profile and choose Message to start one.</div>
               ) : conversations.map((item) => (
                 <div key={item.id} className={`flex items-center gap-3 border-b border-line p-4 hover:bg-page ${item.unreadCount > 0 ? "bg-brand/5" : ""} ${selectedId === item.id ? "bg-brand/5" : ""}`}>
-                  <Link to={profilePath(item.otherUser.userId)} aria-label={`View ${item.otherUser.displayName}'s profile`} className="shrink-0 rounded-full">
+                  <Link to={profilePath(item.otherUser.userId)} aria-label={`View ${item.otherUser.displayName}'s profile${typingConversationIds.has(item.id) ? ", typing" : ""}`} className="relative shrink-0 rounded-full">
                     <Avatar name={item.otherUser.displayName} src={item.otherUser.avatarUrl} />
+                    {typingConversationIds.has(item.id) ? <span className="absolute -bottom-0.5 -right-1 rounded-full border border-line bg-surface px-1.5 py-1 shadow-sm"><TypingDots /></span> : null}
                   </Link>
                   <button type="button" onClick={() => open(item)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                     <span className="min-w-0 flex-1">
                       <span className={`flex items-center gap-2 text-navy ${item.unreadCount > 0 ? "font-bold" : "font-semibold"}`}>
                         {item.otherUser.displayName}
+                        {typingConversationIds.has(item.id) ? <TypingDots /> : null}
                         <span role="status" aria-label={item.otherUser.isOnline ? "Online" : "Offline"} title={item.otherUser.isOnline ? "Online" : "Offline"} className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.otherUser.isOnline ? "bg-emerald-500" : "bg-slate-300"}`} />
                       </span>
-                      <span className={`block truncate text-sm ${item.unreadCount > 0 ? "font-semibold text-ink" : "text-muted"}`}>{item.lastMessage?.content ?? "Start a conversation"}</span>
+                      <span className={`block truncate text-sm ${typingConversationIds.has(item.id) ? "font-semibold text-brand" : item.unreadCount > 0 ? "font-semibold text-ink" : "text-muted"}`}>{typingConversationIds.has(item.id) ? "Typing…" : item.lastMessage?.content ?? "Start a conversation"}</span>
                     </span>
                     {item.unreadCount > 0 ? <span aria-label={`${item.unreadCount} unread message${item.unreadCount === 1 ? "" : "s"}`} className="rounded-full bg-brand px-2.5 py-1 text-xs font-bold text-white">{item.unreadCount > 99 ? "99+" : item.unreadCount}</span> : null}
                   </button>
@@ -305,14 +356,15 @@ export function MessagesPage(): ReactElement {
                   <button type="button" onClick={() => setParams({})} aria-label="Back to conversations" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-page hover:text-navy md:hidden">
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <Link to={profilePath(conversation.otherUser.userId)} aria-label={`View ${conversation.otherUser.displayName}'s profile`}>
+                  <Link to={profilePath(conversation.otherUser.userId)} aria-label={`View ${conversation.otherUser.displayName}'s profile${otherUserTyping ? ", typing" : ""}`} className="relative shrink-0">
                     <Avatar name={conversation.otherUser.displayName} src={conversation.otherUser.avatarUrl} />
+                    {otherUserTyping ? <span className="absolute -bottom-0.5 -right-1 rounded-full border border-line bg-surface px-1.5 py-1 shadow-sm"><TypingDots /></span> : null}
                   </Link>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-semibold text-navy">{conversation.otherUser.displayName}</h2>
+                    <h2 className="flex items-center gap-2 font-semibold text-navy">{conversation.otherUser.displayName}{otherUserTyping ? <TypingDots /> : null}</h2>
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
                       <span aria-hidden="true" className={`h-2 w-2 rounded-full ${conversation.otherUser.isOnline ? "bg-emerald-500" : "bg-slate-300"}`} />
-                      {conversation.otherUser.isOnline ? "Online" : "Offline"}
+                      {otherUserTyping ? "Typing…" : conversation.otherUser.isOnline ? "Online" : "Offline"}
                     </p>
                   </div>
                   <button type="button" onClick={() => void call("audio")} disabled={startingCall} aria-label="Start voice call" title="Voice call" className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-page hover:text-brand disabled:opacity-50"><Phone className="h-4 w-4" /></button>
@@ -377,7 +429,7 @@ export function MessagesPage(): ReactElement {
                       </div>
                     );
                   })}
-                  {otherUserTyping ? <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-muted"><span>{conversation.otherUser.displayName} is typing</span><span className="inline-flex gap-1" aria-hidden="true"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" /></span></div> : null}
+                  {otherUserTyping ? <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-muted"><span>{conversation.otherUser.displayName} is typing</span><TypingDots /></div> : null}
                   <div ref={bottomRef} />
                 </div>
 
