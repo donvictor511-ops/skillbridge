@@ -10,7 +10,7 @@ import type { CreatedSession } from "./session.service";
 import { setSessionCookie } from "./auth.cookies";
 import { AuthProvider } from "../../generated/prisma/enums";
 
-export type OAuthProviderName = "google" | "linkedin";
+export type OAuthProviderName = "google" | "linkedin" | "github";
 
 const STATE_COOKIE_PREFIX = "sb_oauth_";
 const STATE_COOKIE_PATH = "/api/v1/auth/oauth";
@@ -32,13 +32,14 @@ interface ProviderProfile {
 }
 
 export function isOAuthProvider(value: string): value is OAuthProviderName {
-  return value === "google" || value === "linkedin";
+  return value === "google" || value === "linkedin" || value === "github";
 }
 
 export function getOAuthAvailability(): Record<OAuthProviderName, boolean> {
   return {
     google: Boolean(env.googleClientId && env.googleClientSecret),
     linkedin: Boolean(env.linkedinClientId && env.linkedinClientSecret),
+    github: Boolean(env.githubClientId && env.githubClientSecret),
   };
 }
 
@@ -132,6 +133,16 @@ function getProviderConfig(provider: OAuthProviderName): ProviderConfig {
       scope: "openid profile email",
     };
   }
+  if (provider === "github" && env.githubClientId && env.githubClientSecret) {
+    return {
+      clientId: env.githubClientId,
+      clientSecret: env.githubClientSecret,
+      authorizeUrl: "https://github.com/login/oauth/authorize",
+      tokenUrl: "https://github.com/login/oauth/access_token",
+      userInfoUrl: "https://api.github.com/user",
+      scope: "read:user user:email",
+    };
+  }
   throw new AppError(503, "OAUTH_NOT_CONFIGURED", `${provider} sign-in is not configured yet.`);
 }
 
@@ -185,13 +196,36 @@ async function exchangeCodeAndGetProfile(
   if (!accessToken) throw new Error("OAuth provider did not return an access token.");
 
   const profileResponse = await fetch(config.userInfoUrl, {
-    headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: provider === "github" ? "application/vnd.github+json" : "application/json",
+      ...(provider === "github" ? { "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "SkillBridge" } : {}),
+    },
   });
   if (!profileResponse.ok) throw new Error("OAuth profile lookup failed.");
   const payload: unknown = await profileResponse.json();
-  const subject = readString(payload, "sub");
-  const email = readString(payload, "email").trim().toLowerCase();
-  const emailVerified = readBoolean(payload, "email_verified");
+  const subject = provider === "github" ? readIdentifier(payload, "id") : readString(payload, "sub");
+  let email = readString(payload, "email").trim().toLowerCase();
+  let emailVerified = readBoolean(payload, "email_verified");
+  if (provider === "github") {
+    const emailsResponse = await fetch("https://api.github.com/user/emails", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "SkillBridge",
+      },
+    });
+    if (!emailsResponse.ok) throw new Error("GitHub email lookup failed.");
+    const emailsPayload: unknown = await emailsResponse.json();
+    const verifiedEmails = Array.isArray(emailsPayload)
+      ? emailsPayload.filter((item) => typeof item === "object" && item !== null && (item as Record<string, unknown>).verified === true)
+      : [];
+    const primaryEmail = verifiedEmails.find((item) => (item as Record<string, unknown>).primary === true) ?? verifiedEmails[0];
+    const emailValue = primaryEmail && (primaryEmail as Record<string, unknown>).email;
+    email = typeof emailValue === "string" ? emailValue.trim().toLowerCase() : "";
+    emailVerified = Boolean(email);
+  }
   if (!subject || !email || !email.includes("@")) throw new Error("OAuth profile is missing a usable email.");
   return { subject, email, emailVerified };
 }
@@ -207,11 +241,21 @@ function readBoolean(payload: unknown, key: string): boolean {
   return (payload as Record<string, unknown>)[key] === true;
 }
 
+function readIdentifier(payload: unknown, key: string): string {
+  if (typeof payload !== "object" || payload === null || !(key in payload)) return "";
+  const value = (payload as Record<string, unknown>)[key];
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
 async function findOrCreateOAuthUser(
   provider: OAuthProviderName,
   profile: ProviderProfile,
 ): Promise<AuthUser> {
-  const providerType = provider === "google" ? AuthProvider.google : AuthProvider.linkedin;
+  const providerType = provider === "google"
+    ? AuthProvider.google
+    : provider === "linkedin"
+      ? AuthProvider.linkedin
+      : AuthProvider.github;
   const identityWhere = {
     provider_providerSubject: { provider: providerType, providerSubject: profile.subject },
   };

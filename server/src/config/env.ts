@@ -20,6 +20,8 @@ export interface Env {
   googleClientSecret?: string;
   linkedinClientId?: string;
   linkedinClientSecret?: string;
+  githubClientId?: string;
+  githubClientSecret?: string;
 }
 
 function readNodeEnv(value: string | undefined): NodeEnv {
@@ -85,4 +87,6 @@ export const env: Env = {
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() || undefined,
   linkedinClientId: process.env.LINKEDIN_CLIENT_ID?.trim() || undefined,
   linkedinClientSecret: process.env.LINKEDIN_CLIENT_SECRET?.trim() || undefined,
+  githubClientId: process.env.GITHUB_CLIENT_ID?.trim() || undefined,
+  githubClientSecret: process.env.GITHUB_CLIENT_SECRET?.trim() || undefined,
 };
