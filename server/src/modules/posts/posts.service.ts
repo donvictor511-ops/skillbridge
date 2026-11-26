@@ -603,10 +603,13 @@ export async function listComments(viewer: AuthUser, postId: string) {
 
 export async function toggleCommentLike(userId: string, postId: string, commentId: string, liked: boolean): Promise<void> {
   await findAccessiblePost(postId, { id: userId });
-  const comment = await prisma.postComment.findFirst({ where: { id: commentId, postId, moderationStatus: "published" }, select: { id: true } });
+  const comment = await prisma.postComment.findFirst({ where: { id: commentId, postId, moderationStatus: "published" }, select: { id: true, authorId: true } });
   if (!comment) throw new AppError(404, "COMMENT_NOT_FOUND", "Comment not found.");
   if (liked) {
-    await prisma.postCommentLike.upsert({ where: { commentId_userId: { commentId, userId } }, create: { commentId, userId }, update: {} });
+    const result = await prisma.postCommentLike.createMany({ data: { commentId, userId }, skipDuplicates: true });
+    if (result.count && comment.authorId !== userId) {
+      await prisma.notification.create({ data: { recipientId: comment.authorId, actorId: userId, type: "post_comment", message: "liked your comment.", resourceId: postId } });
+    }
   } else {
     await prisma.postCommentLike.deleteMany({ where: { commentId, userId } });
   }
@@ -622,7 +625,6 @@ export async function createComment(
   if (input.parentCommentId) {
     parentComment = await prisma.postComment.findFirst({ where: { id: input.parentCommentId, postId, moderationStatus: "published" }, select: { id: true, authorId: true, parentCommentId: true } });
     if (!parentComment) throw new AppError(404, "COMMENT_NOT_FOUND", "Comment not found.");
-    if (parentComment.parentCommentId) throw new AppError(400, "REPLY_DEPTH_LIMIT", "Replies can be made to top-level comments only.");
   }
   const assessment = await assessContent(authorId, input.content, "comment");
 

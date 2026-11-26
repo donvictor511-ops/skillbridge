@@ -15,6 +15,7 @@ messagesRouter.post("/audio", requireWriteAccess, uploadSingleAudioMessage, uplo
 messagesRouter.get("/unread-count", controller.unreadCount);
 messagesRouter.get("/conversations", controller.conversations);
 messagesRouter.post("/conversations", requireWriteAccess, controller.createConversation);
+messagesRouter.post("/conversations/:conversationId/typing", requireWriteAccess, controller.typing);
 messagesRouter.get("/conversations/:conversationId", controller.conversation);
 messagesRouter.get("/conversations/:conversationId/calls", controller.conversationCalls);
 messagesRouter.patch("/conversations/:conversationId/read", controller.readConversation);

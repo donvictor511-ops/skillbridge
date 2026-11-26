@@ -14,6 +14,7 @@ export const messageParamsSchema = conversationParamsSchema.extend({
   messageId: uuidSchema,
 });
 export const messageReactionSchema = z.object({ emoji: z.enum(["👍", "❤️", "😂", "😮", "😢", "🙏"]) });
+export const messageTypingSchema = z.object({ isTyping: z.boolean() });
 
 export const conversationListQuerySchema = z.object({
   archived: z.preprocess(

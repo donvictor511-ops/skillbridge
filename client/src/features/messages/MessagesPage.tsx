@@ -16,7 +16,7 @@ import { useNavigate } from "react-router";
 import { uploadPostMedia } from "../posts/postsService";
 import { VoiceDictationButton } from "../../components/ui/VoiceDictationButton";
 import { VoiceRecordingButton } from "../../components/ui/VoiceRecordingButton";
-import { uploadVoiceMessage } from "./messagesService";
+import { sendTypingStatus, uploadVoiceMessage } from "./messagesService";
 import { MessageMediaViewer } from "./MessageMediaViewer";
 
 function stamp(value: string): string {
@@ -43,6 +43,7 @@ export function MessagesPage(): ReactElement {
   const selectedId = params.get("conversationId") ?? "";
   const [archived, setArchived] = useState(false);
   const [draft, setDraft] = useState("");
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -69,6 +70,9 @@ export function MessagesPage(): ReactElement {
   }, []);
   const bottomRef = useRef<HTMLDivElement>(null);
   const historyPaneRef = useRef<HTMLDivElement>(null);
+  const typingTimerRef = useRef<number | null>(null);
+  const typingExpiryRef = useRef<number | null>(null);
+  const localTypingRef = useRef(false);
 
   const { data: user } = useCurrentUser();
   const list = useConversations(archived);
@@ -135,11 +139,55 @@ export function MessagesPage(): ReactElement {
 
   const conversation = detail.data ?? conversations.find((item) => item.id === selectedId);
 
+  useEffect(() => {
+    setOtherUserTyping(false);
+    function onTyping(event: Event) {
+      const detail = (event as CustomEvent<{ conversationId: string; userId: string; isTyping: boolean }>).detail;
+      if (detail.conversationId !== selectedId || detail.userId === user?.id) return;
+      setOtherUserTyping(detail.isTyping);
+      if (typingExpiryRef.current !== null) window.clearTimeout(typingExpiryRef.current);
+      if (detail.isTyping) typingExpiryRef.current = window.setTimeout(() => setOtherUserTyping(false), 2600);
+    }
+    window.addEventListener("skillbridge:message-typing", onTyping);
+    return () => {
+      window.removeEventListener("skillbridge:message-typing", onTyping);
+      if (typingExpiryRef.current !== null) window.clearTimeout(typingExpiryRef.current);
+      if (typingTimerRef.current !== null) window.clearTimeout(typingTimerRef.current);
+      if (localTypingRef.current && selectedId) {
+        void sendTypingStatus(selectedId, false).catch(() => undefined);
+        localTypingRef.current = false;
+      }
+    };
+  }, [selectedId, user?.id]);
+
+  function stopTyping() {
+    if (typingTimerRef.current !== null) window.clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = null;
+    if (localTypingRef.current && selectedId) void sendTypingStatus(selectedId, false).catch(() => undefined);
+    localTypingRef.current = false;
+  }
+
+  function updateDraft(value: string) {
+    setDraft(value);
+    if (!selectedId) return;
+    if (typingTimerRef.current !== null) window.clearTimeout(typingTimerRef.current);
+    if (value.trim() && !localTypingRef.current) {
+      localTypingRef.current = true;
+      void sendTypingStatus(selectedId, true).catch(() => { localTypingRef.current = false; });
+    }
+    if (!value.trim()) {
+      stopTyping();
+      return;
+    }
+    typingTimerRef.current = window.setTimeout(stopTyping, 1400);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = draft.trim();
     if (!selectedId || (!content && !attachment && !voiceNote) || actions.send.isPending) return;
 
+    stopTyping();
     setMessageError(null);
     try {
       const media = attachment ? await uploadPostMedia(attachment) : voiceNote ? await uploadVoiceMessage(voiceNote) : null;
@@ -300,7 +348,7 @@ export function MessagesPage(): ReactElement {
                             {editingId !== message.id && message.content ? <p className={`whitespace-pre-wrap break-words ${message.isDeleted ? "italic opacity-75" : ""}`}>{message.content}</p> : null}
                             {message.replyTo ? <button type="button" onClick={() => document.getElementById(`message-${message.replyTo?.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })} className="mb-2 block w-full rounded-lg border-l-2 border-current/50 bg-black/5 px-2 py-1 text-left text-xs"><span className="block font-semibold">Replying to {message.replyTo.senderName}</span><span className="block truncate opacity-80">{message.replyTo.content || (message.replyTo.mediaType === "video" ? "Sent a video" : message.replyTo.mediaType === "image" ? "Sent a photo" : "Message")}</span></button> : null}
                             {message.mediaUrl && (message.mediaType === "image" || message.mediaType === "video") ? <><p className="mt-2 text-[11px] font-semibold opacity-80">{message.mediaType === "image" ? "Sent a photo" : "Sent a video"}</p><div className="relative mt-1">{message.mediaType === "image" ? <button type="button" onClick={() => setExpandedMedia({ url: message.mediaUrl!, type: "image" })} aria-label="Expand photo" className="block cursor-zoom-in"><img src={message.mediaUrl} alt="Photo attachment; select to expand" className="max-h-80 max-w-full rounded-lg object-contain" /></button> : <><video src={message.mediaUrl} controls playsInline className="max-h-80 max-w-full rounded-lg" /><button type="button" onClick={() => setExpandedMedia({ url: message.mediaUrl!, type: "video" })} aria-label="Expand video" title="Expand video" className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-lg bg-black/60 text-white hover:bg-black/80"><Maximize2 className="h-4 w-4" /></button></>}</div></> : null}
-                            {message.mediaUrl && message.mediaType === "audio" ? <audio controls preload="metadata" src={message.mediaUrl} className="mt-2 block w-full max-w-full" aria-label="Voice message" onPlay={(event) => { setPlayingVoiceId(message.id); event.currentTarget.closest("[id^='message-']")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} onEnded={() => setPlayingVoiceId((id) => id === message.id ? null : id)} onPause={() => setPlayingVoiceId((id) => id === message.id ? null : id)} /> : null}
+                            {message.mediaUrl && message.mediaType === "audio" ? <><p className="mt-2 flex items-center gap-1.5 text-xs font-semibold opacity-80"><span aria-hidden="true">🎙</span>Sent a voice message</p><audio controls preload="metadata" src={message.mediaUrl} className="mt-1 block w-full max-w-full" aria-label="Voice message" onPlay={(event) => { setPlayingVoiceId(message.id); event.currentTarget.closest("[id^='message-']")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} onEnded={() => setPlayingVoiceId((id) => id === message.id ? null : id)} onPause={() => setPlayingVoiceId((id) => id === message.id ? null : id)} /></> : null}
                             {message.reactions?.length || reactionPickerId === message.id ? <div data-message-reaction-picker className="mt-2 flex flex-wrap items-center gap-1">{message.reactions?.map((reaction) => <button key={reaction.emoji} type="button" onClick={() => actions.react.mutate({ conversationId: selectedId, messageId: message.id, emoji: reaction.emoji })} aria-label={`${reaction.emoji}, ${reaction.count} reactions`} className={`rounded-full border px-2 py-0.5 text-xs ${reaction.reactedByMe ? "border-brand bg-brand/10" : "border-line bg-surface/70"}`}>{reaction.emoji} {reaction.count}</button>)}{reactionPickerId === message.id ? ["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => <button key={emoji} type="button" onClick={() => { actions.react.mutate({ conversationId: selectedId, messageId: message.id, emoji }); setReactionPickerId(null); }} aria-label={`React ${emoji}`} className="grid h-7 w-7 place-items-center rounded-full hover:bg-black/10">{emoji}</button>) : null}</div> : null}
                             <div className="mt-1 flex items-center justify-end gap-2 text-[11px] opacity-75">
                               <time dateTime={message.createdAt}>{stamp(message.createdAt)}</time>
@@ -329,6 +377,7 @@ export function MessagesPage(): ReactElement {
                       </div>
                     );
                   })}
+                  {otherUserTyping ? <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-muted"><span>{conversation.otherUser.displayName} is typing</span><span className="inline-flex gap-1" aria-hidden="true"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" /></span></div> : null}
                   <div ref={bottomRef} />
                 </div>
 
@@ -338,7 +387,7 @@ export function MessagesPage(): ReactElement {
                 <form onSubmit={submit} className="shrink-0 border-t border-line bg-surface p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
                   <div className="flex items-end gap-2">
                     <label className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-line bg-page text-muted transition-colors hover:text-brand" title="Attach an image or video" aria-label="Attach an image or video"><ImagePlus className="h-5 w-5" /><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" className="sr-only" onChange={(event) => { setAttachment(event.target.files?.[0] ?? null); setVoiceNote(null); }} /></label>
-                    <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={5000} rows={3} placeholder={replyTarget ? `Reply to ${replyTarget.sender.displayName}…` : attachment?.name ?? voiceNote?.name ?? "Write a message…"} className="min-h-[5.5rem] max-h-36 min-w-0 flex-1 resize-none rounded-2xl border border-line bg-page px-4 py-3 text-base leading-relaxed text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15" />
+                    <textarea value={draft} onChange={(event) => updateDraft(event.target.value)} onBlur={stopTyping} maxLength={5000} rows={3} placeholder={replyTarget ? `Reply to ${replyTarget.sender.displayName}…` : attachment?.name ?? voiceNote?.name ?? "Write a message…"} className="min-h-[5.5rem] max-h-36 min-w-0 flex-1 resize-none rounded-2xl border border-line bg-page px-4 py-3 text-base leading-relaxed text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15" />
                     {voiceNote ? <button type="button" onClick={() => setVoiceNote(null)} aria-label="Remove voice recording" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-danger hover:bg-danger/10"><X className="h-5 w-5" /></button> : null}
                     <Button type="submit" aria-label={actions.send.isPending ? "Sending message" : "Send message"} disabled={(!draft.trim() && !attachment && !voiceNote) || actions.send.isPending} className="h-11 w-11 shrink-0 justify-center rounded-full px-0 sm:w-auto sm:rounded-xl sm:px-4">
                       <Send className="h-5 w-5 sm:mr-2 sm:h-4 sm:w-4" /><span className="hidden sm:inline">{actions.send.isPending ? "Sending…" : "Send"}</span>

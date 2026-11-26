@@ -11,6 +11,7 @@ import {
   createMessageSchema, messageListQuerySchema, messageParamsSchema,
   deleteMessageSchema, updateMessageSchema,
   messageReactionSchema,
+  messageTypingSchema,
 } from "./messages.schema";
 
 function user(req: Request) {
@@ -48,6 +49,14 @@ export async function conversations(req: Request, res: Response): Promise<void> 
 }
 export async function createConversation(req: Request, res: Response): Promise<void> {
   res.status(201).json({ data: await createOrGetConversation(user(req).id, createConversationSchema.parse(req.body)) });
+}
+export async function typing(req: Request, res: Response): Promise<void> {
+  const { conversationId } = conversationParamsSchema.parse(req.params);
+  const current = user(req);
+  const { isTyping } = messageTypingSchema.parse(req.body);
+  const conversation = await getConversation(conversationId, current.id);
+  publishToUser(conversation.otherUser.userId, "message.typing", { conversationId, userId: current.id, isTyping });
+  res.status(204).send();
 }
 export async function conversation(req: Request, res: Response): Promise<void> {
   const { conversationId } = conversationParamsSchema.parse(req.params);

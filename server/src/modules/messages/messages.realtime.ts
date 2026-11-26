@@ -9,6 +9,7 @@ export type RealtimeEventName =
   | "conversation.read"
   | "conversation.created"
   | "presence.changed"
+  | "message.typing"
   | "call.invite"
   | "call.signal"
   | "call.peer_joined"

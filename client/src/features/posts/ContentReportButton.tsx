@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Flag } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { postKeys } from "./postsQueries";
@@ -10,10 +10,24 @@ export function ContentReportButton({ postId, commentId }: { postId: string; com
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<(typeof reasons)[number]>("other");
   const [details, setDetails] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const mutation = useMutation({ mutationFn: () => reportPostContent({ postId, commentId, reason, details }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: postKeys.feed() }); setOpen(false); } });
+  useEffect(() => {
+    if (!open) return;
+    function dismiss(event: PointerEvent | KeyboardEvent) {
+      if (event instanceof KeyboardEvent) {
+        if (event.key === "Escape") setOpen(false);
+        return;
+      }
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", dismiss);
+    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", dismiss); };
+  }, [open]);
   if (mutation.isSuccess) return <span role="status" className="text-xs text-emerald-700">Report submitted</span>;
-  return <div className="relative">
+  return <div ref={containerRef} className="relative">
     <button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"><Flag className="h-3.5 w-3.5" />Report</button>
     {open ? <form onSubmit={(event) => { event.preventDefault(); mutation.mutate(); }} className="absolute right-0 top-8 z-30 w-72 space-y-2 rounded-xl border border-line bg-surface p-3 shadow-xl">
       <label className="block text-xs font-semibold text-ink">Reason<select value={reason} onChange={(event) => setReason(event.target.value as (typeof reasons)[number])} className="mt-1 w-full rounded-lg border border-line bg-surface px-2 py-2 text-sm">{reasons.map((item) => <option value={item} key={item}>{item.replaceAll("_", " ")}</option>)}</select></label>
