@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactElement } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { LoaderCircle, Search, X } from "lucide-react";
@@ -9,22 +9,22 @@ import type { GlobalSearchItem } from "./searchService";
 export function GlobalSearchBox({ compact = false }: { compact?: boolean }): ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
+  const routeKey = `${location.pathname}${location.search}`;
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [openRoute, setOpenRoute] = useState<string | null>(null);
+  const [expandedRoute, setExpandedRoute] = useState<string | null>(null);
+  const isOpen = openRoute === routeKey;
+  const isExpanded = expandedRoute === routeKey;
+  const setIsOpen = useCallback((open: boolean) => setOpenRoute(open ? routeKey : null), [routeKey]);
+  const setIsExpanded = useCallback((expanded: boolean) => setExpandedRoute(expanded ? routeKey : null), [routeKey]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(value.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [value]);
-
-  useEffect(() => {
-    setIsOpen(false);
-    setIsExpanded(false);
-  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -37,7 +37,7 @@ export function GlobalSearchBox({ compact = false }: { compact?: boolean }): Rea
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => { document.removeEventListener("pointerdown", onPointerDown); document.removeEventListener("keydown", onKeyDown); };
-  }, [isOpen]);
+  }, [isOpen, setIsExpanded, setIsOpen]);
 
   useEffect(() => {
     if (isExpanded) inputRef.current?.focus();
@@ -73,7 +73,7 @@ export function GlobalSearchBox({ compact = false }: { compact?: boolean }): Rea
   </form>;
 
   return <div ref={rootRef} className={cn("relative", compact ? "md:hidden" : "hidden min-w-36 flex-1 md:block xl:max-w-sm")}>
-    {compact ? <button type="button" aria-label={isExpanded ? "Close search" : "Open global search"} onClick={() => { setIsExpanded((open) => !open); setIsOpen(!isExpanded); }} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-navy hover:bg-page"><Search className="h-5 w-5" /></button> : null}
+    {compact ? <button type="button" aria-label={isExpanded ? "Close search" : "Open global search"} onClick={() => { const open = !isExpanded; setIsExpanded(open); setIsOpen(open); }} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-navy hover:bg-page"><Search className="h-5 w-5" /></button> : null}
     {compact ? isExpanded ? <div className="absolute right-0 top-12 z-50 w-[min(90vw,24rem)] rounded-2xl border border-line bg-surface p-3 shadow-card">{input}</div> : null : input}
     {isOpen && !compact && debounced.length >= 2 ? <SuggestionPanel query={query} suggestions={suggestions} onChoose={() => setIsOpen(false)} onSearch={seeAllResults} compact={false} /> : null}
     {isOpen && compact && isExpanded && debounced.length >= 2 ? <SuggestionPanel query={query} suggestions={suggestions} onChoose={() => { setIsOpen(false); setIsExpanded(false); }} onSearch={seeAllResults} compact /> : null}

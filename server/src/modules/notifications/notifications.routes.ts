@@ -7,6 +7,12 @@ import {
   readNotification,
   removeAllNotifications,
   removeNotification,
+  getPushConfiguration,
+  getNotificationSettings,
+  patchNotificationPreferences,
+  addNotificationDevice,
+  deleteNotificationDevice,
+  getNotificationInbox,
 } from "./notifications.controller";
 
 export const notificationsRouter = Router();
@@ -17,8 +23,17 @@ notificationsRouter.use((_req, res, next) => {
   next();
 });
 
-// Every Notifications endpoint requires authentication.
+// Firebase web configuration contains public client keys only.
+notificationsRouter.get("/firebase-config", getPushConfiguration);
+
+// Private notification endpoints require authentication.
 notificationsRouter.use(requireAuth);
+
+notificationsRouter.get("/settings", getNotificationSettings);
+notificationsRouter.get("/inbox", getNotificationInbox);
+notificationsRouter.patch("/preferences", patchNotificationPreferences);
+notificationsRouter.post("/devices", addNotificationDevice);
+notificationsRouter.delete("/devices/:deviceId", deleteNotificationDevice);
 
 // List notifications.
 notificationsRouter.get("/", getNotifications);

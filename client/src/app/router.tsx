@@ -23,6 +23,9 @@ import RouteErrorPage from "../pages/RouteErrorPage";
 import DiscoverPage from "../pages/DiscoverPage";
 import ConnectionsPage from "../pages/ConnectionsPage";
 import { PostsFeedPage } from "../features/posts/PostsFeedPage";
+import { SavedPostsPage } from "../features/posts/SavedPostsPage";
+import { NotificationSettingsPage } from "../features/notifications/NotificationSettingsPage";
+import { NotificationsPage } from "../features/notifications/NotificationsPage";
 import { MessagesPage } from "../features/messages/MessagesPage";
 import { CommunitiesPage } from "../features/communities/CommunitiesPage";
 import { JobsPage, MyJobApplicationsPage } from "../features/marketplace/JobsPage";
@@ -68,6 +71,9 @@ export const router = createBrowserRouter([
                 element: <OnboardedRoute />,
                 children: [
                   { path: paths.posts, element: <PostsFeedPage /> },
+                  { path: paths.savedPosts, element: <SavedPostsPage /> },
+                  { path: paths.notificationSettings, element: <NotificationSettingsPage /> },
+                  { path: paths.notifications, element: <NotificationsPage /> },
                   { path: paths.dashboard, element: <DashboardPage /> },
                   { path: paths.discover, element: <DiscoverPage /> },
                   { path: paths.search, element: <SearchPage /> },

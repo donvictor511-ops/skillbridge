@@ -20,6 +20,9 @@ import {
   reactToPost,
   likeComment,
   unlikeComment,
+  getBookmarkedPosts,
+  savePostBookmark,
+  removePostBookmark,
 } from "./posts.controller";
 import { uploadSinglePostMedia } from "../../middleware/uploadPostMedia";
 import { uploadPostMediaController } from "./posts.media.controller";
@@ -35,6 +38,7 @@ postsRouter.use((_req, res, next) => {
 // The feed supports anonymous visitors and logged-in users.
 postsRouter.get("/", optionalAuth, getPosts);
 postsRouter.get("/by-author/:userId", optionalAuth, getProfilePosts);
+postsRouter.get("/bookmarks", requireAuth, getBookmarkedPosts);
 
 // All remaining Posts endpoints require authentication.
 postsRouter.use(requireAuth);
@@ -51,6 +55,8 @@ postsRouter.post("/:postId/reports", reportPost);
 postsRouter.post("/:postId/likes", requireWriteAccess, likePost);
 postsRouter.delete("/:postId/likes", requireWriteAccess, unlikePost);
 postsRouter.patch("/:postId/reactions", requireWriteAccess, reactToPost);
+postsRouter.put("/:postId/bookmark", requireWriteAccess, savePostBookmark);
+postsRouter.delete("/:postId/bookmark", requireWriteAccess, removePostBookmark);
 postsRouter.post("/:postId/shares", requireWriteAccess, sharePostWithConnection);
 postsRouter.post("/:postId/reposts", requireWriteAccess, createRepost);
 postsRouter.delete("/:postId/reposts", requireWriteAccess, removeRepost);

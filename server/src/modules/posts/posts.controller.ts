@@ -28,8 +28,11 @@ import {
   updatePost as updatePostService,
   reportPost as reportPostService,
   listProfilePosts as listProfilePostsService,
+  listBookmarkedPosts as listBookmarkedPostsService,
   reactToPost as reactToPostService,
   toggleCommentLike as toggleCommentLikeService,
+  savePostBookmark as savePostBookmarkService,
+  removePostBookmark as removePostBookmarkService,
 } from "./posts.service";
 import type { AuthUser } from "../auth/auth.types";
 
@@ -64,6 +67,23 @@ export async function getProfilePosts(req: Request, res: Response): Promise<void
   const authorId = z.uuid().parse(req.params.userId);
   const query = postFeedQuerySchema.parse(req.query);
   res.status(200).json(await listProfilePostsService(authorId, req.user, query));
+}
+
+export async function getBookmarkedPosts(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  res.status(200).json(await listBookmarkedPostsService(user, postFeedQuerySchema.parse(req.query)));
+}
+
+export async function savePostBookmark(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId } = postParamsSchema.parse(req.params);
+  res.status(200).json({ data: await savePostBookmarkService(user.id, postId) });
+}
+
+export async function removePostBookmark(req: Request, res: Response): Promise<void> {
+  const user = getAuthenticatedUser(req);
+  const { postId } = postParamsSchema.parse(req.params);
+  res.status(200).json({ data: await removePostBookmarkService(user.id, postId) });
 }
 
 export async function reactToPost(req: Request, res: Response): Promise<void> {

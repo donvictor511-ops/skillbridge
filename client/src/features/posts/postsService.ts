@@ -37,12 +37,21 @@ export async function uploadPostMedia(file: File): Promise<UploadedPostMedia> {
 export async function getPosts(
   cursor?: string,
   limit = 20,
+  bookmarksOnly = false,
 ): Promise<PostsFeedResponse> {
-  const response = await apiClient.get<PostsFeedResponse>("/posts", {
+  const response = await apiClient.get<PostsFeedResponse>(bookmarksOnly ? "/posts/bookmarks" : "/posts", {
     params: { cursor, limit },
   });
 
   return response.data;
+}
+
+export async function setPostBookmark(postId: string, save: boolean): Promise<{ isBookmarked: boolean }> {
+  const response = await apiClient.request<{ data: { isBookmarked: boolean } }>({
+    method: save ? "PUT" : "DELETE",
+    url: `/posts/${postId}/bookmark`,
+  });
+  return response.data.data;
 }
 
 export async function getAuthorPosts(userId: string, cursor?: string, limit = 3): Promise<PostsFeedResponse> {

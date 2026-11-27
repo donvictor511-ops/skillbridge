@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Share2, Link2, Check, Repeat2, SmilePlus, MessageCircle, MoreHorizontal } from "lucide-react";
+import { Share2, Link2, Check, Repeat2, SmilePlus, MessageCircle, MoreHorizontal, Bookmark } from "lucide-react";
 
 import { paths, profilePath } from "../../app/paths";
 import { Avatar } from "../../components/ui/Avatar";
@@ -18,6 +18,7 @@ import {
   useRepostPost,
   useUndoRepost,
   useReactToPost,
+  useTogglePostBookmark,
 } from "./postsQueries";
 import { CommentSection } from "./CommentSection";
 import { ContentReportButton } from "./ContentReportButton";
@@ -86,6 +87,7 @@ export function PostCard({ post }: PostCardProps) {
   const repostMutation = useRepostPost();
   const undoRepostMutation = useUndoRepost();
   const reactionMutation = useReactToPost();
+  const bookmarkMutation = useTogglePostBookmark();
   const connectionsQuery = useConnections("accepted", showConnections);
 
   const isOwner = currentUserQuery.data?.id === post.author.userId;
@@ -405,6 +407,17 @@ export function PostCard({ post }: PostCardProps) {
             <span className="hidden sm:inline">{showComments ? "Hide comments" : "Comments"}</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => bookmarkMutation.mutate({ postId: post.id, save: !post.isBookmarkedByViewer })}
+            disabled={bookmarkMutation.isPending}
+            aria-pressed={post.isBookmarkedByViewer}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold transition disabled:opacity-50 sm:gap-2 sm:px-3 sm:text-sm ${post.isBookmarkedByViewer ? "bg-amber-50 text-amber-700" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            <Bookmark className="h-4 w-4" aria-hidden="true" />
+            {post.isBookmarkedByViewer ? "Saved" : "Save"}
+          </button>
+
           <div className="relative min-w-0 sm:ml-auto">
             <button type="button" onClick={() => setShowShareOptions((value) => !value)} aria-expanded={showShareOptions} aria-haspopup="true" className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 sm:w-auto sm:gap-2 sm:px-3 sm:text-sm">
               <Share2 className="h-4 w-4" aria-hidden="true" /> Share
@@ -456,6 +469,7 @@ export function PostCard({ post }: PostCardProps) {
             Unable to update your like. Please try again.
           </p>
         )}
+        {bookmarkMutation.isError ? <p role="alert" className="mt-2 text-sm text-red-600">Could not update your saved posts. Please try again.</p> : null}
 
         {repostError ? <p role="alert" className="mt-2 text-sm text-red-600">{repostError}</p> : null}
 

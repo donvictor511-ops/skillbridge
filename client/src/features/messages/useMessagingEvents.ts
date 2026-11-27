@@ -12,6 +12,7 @@ export function useMessagingEvents(enabled: boolean) {
       void qc.invalidateQueries({ queryKey: ["notifications"] });
     };
     ["message.created", "message.updated", "message.reactions", "message.deleted", "message.hidden", "conversation.read", "conversation.created", "presence.changed"].forEach((event) => source.addEventListener(event, refresh));
+    source.addEventListener("notification.created", refresh);
     source.addEventListener("message.typing", (event) => {
       try {
         const detail = JSON.parse((event as MessageEvent<string>).data) as { conversationId: string; userId: string; isTyping: boolean };

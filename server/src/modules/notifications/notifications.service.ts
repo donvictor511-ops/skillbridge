@@ -1,6 +1,7 @@
 import { prisma } from "../../db/prisma";
 import type { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../utils/appError";
+import type { NotificationListQuery } from "./notifications.schema";
 
 export type NotificationKind =
   | "follow"
@@ -24,6 +25,62 @@ export type NotificationKind =
   | "content_moderation_update"
   | "account_appeal_update";
 
+const notificationTypesByPreference = {
+  postLikes: ["post_like"],
+  comments: ["post_comment", "post_shared"],
+  messages: ["message"],
+  connections: ["connection_request", "connection_accepted"],
+  groups: ["community_post", "community_invite"],
+  marketplace: ["job_application", "job_application_update", "project_proposal", "project_proposal_update", "interview_scheduled", "interview_updated"],
+  platformUpdates: ["moderation_report", "account_appeal", "account_appeal_update", "content_moderation_case", "content_moderation_update"],
+} as const;
+
+export async function getNotificationPreferences(userId: string) {
+  return prisma.notificationPreference.upsert({ where: { userId }, create: { userId }, update: {} });
+}
+
+export async function updateNotificationPreferences(
+  userId: string,
+  input: Partial<Pick<Awaited<ReturnType<typeof getNotificationPreferences>>, "inAppEnabled" | "pushEnabled" | "postLikes" | "comments" | "mentions" | "messages" | "connections" | "groups" | "marketplace" | "platformUpdates">>,
+) {
+  return prisma.notificationPreference.upsert({
+    where: { userId },
+    create: { userId, ...input },
+    update: input,
+  });
+}
+
+function visibleNotificationTypes(preferences: Awaited<ReturnType<typeof getNotificationPreferences>>) {
+  return Object.entries(notificationTypesByPreference)
+    .filter(([key]) => !preferences[key as keyof typeof notificationTypesByPreference])
+    .flatMap(([, types]) => [...types]);
+}
+
+function notificationSelectFor(userId: string) {
+  return {
+    id: true,
+    type: true,
+    message: true,
+    resourceId: true,
+    isRead: true,
+    createdAt: true,
+    actor: {
+      select: {
+        id: true,
+        profile: { select: { displayName: true, avatarUrl: true } },
+        followers: { where: { followerId: userId }, select: { followerId: true } },
+      },
+    },
+  } satisfies Prisma.NotificationSelect;
+}
+
+function addFollowState<T extends { actor: { followers: readonly unknown[] } }>(rows: T[]) {
+  return rows.map(({ actor, ...notification }) => {
+    const { followers, ...actorData } = actor;
+    return { ...notification, actor: { ...actorData, isFollowedByViewer: followers.length > 0 } };
+  });
+}
+
 export async function notifyAdministrators(
   tx: Prisma.TransactionClient,
   input: { actorId: string; type: "moderation_report" | "account_appeal" | "content_moderation_case"; message: string; resourceId: string },
@@ -44,7 +101,7 @@ interface CreateNotificationInput {
 }
 
 export async function createNotification(input: CreateNotificationInput) {
-  return prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: {
       recipientId: input.recipientId,
       actorId: input.actorId,
@@ -63,54 +120,55 @@ export async function createNotification(input: CreateNotificationInput) {
       createdAt: true,
     },
   });
+  return notification;
 }
 
 export async function listNotifications(userId: string) {
-  const notifications = await prisma.notification.findMany({
-    where: { recipientId: userId },
+  const preferences = await getNotificationPreferences(userId);
+  if (!preferences.inAppEnabled) return [];
+  const rows = await prisma.notification.findMany({
+    where: { recipientId: userId, type: { notIn: visibleNotificationTypes(preferences) } },
     orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      type: true,
-      message: true,
-      resourceId: true,
-      isRead: true,
-      createdAt: true,
-      actor: {
-        select: {
-          id: true,
-          profile: {
-            select: {
-              displayName: true,
-              avatarUrl: true,
-            },
-          },
-          followers: {
-            where: { followerId: userId },
-            select: { followerId: true },
-          },
-        },
-      },
-    },
+    take: 50,
+    select: notificationSelectFor(userId),
   });
+  return addFollowState(rows);
+}
 
-  return notifications.map(({ actor, ...notification }) => {
-    const { followers, ...actorData } = actor;
-    return {
-      ...notification,
-      actor: {
-        ...actorData,
-        isFollowedByViewer: followers.length > 0,
-      },
-    };
+export async function listNotificationPage(userId: string, query: NotificationListQuery) {
+  const preferences = await getNotificationPreferences(userId);
+  if (!preferences.inAppEnabled) return { data: [], nextCursor: null };
+  const excludedTypes = visibleNotificationTypes(preferences);
+  const where = {
+    recipientId: userId,
+    type: { notIn: excludedTypes },
+    ...(query.filter === "unread" ? { isRead: false } : {}),
+  };
+  let cursorDate: Date | undefined;
+  if (query.cursor) {
+    const cursor = await prisma.notification.findFirst({ where: { ...where, id: query.cursor }, select: { id: true, createdAt: true } });
+    if (!cursor) throw new AppError(404, "NOTIFICATION_NOT_FOUND", "Notification cursor not found.");
+    cursorDate = cursor.createdAt;
+  }
+  const rows = await prisma.notification.findMany({
+    where: { ...where, ...(cursorDate ? { OR: [{ createdAt: { lt: cursorDate } }, { createdAt: cursorDate, id: { lt: query.cursor! } }] } : {}) },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: query.limit + 1,
+    select: notificationSelectFor(userId),
   });
+  const hasMore = rows.length > query.limit;
+  const data = addFollowState(rows.slice(0, query.limit));
+  return { data, nextCursor: hasMore ? data.at(-1)?.id ?? null : null };
 }
 
 export async function getUnreadNotificationCount(userId: string) {
+  const preferences = await getNotificationPreferences(userId);
+  if (!preferences.inAppEnabled) return 0;
   return prisma.notification.count({
     where: {
       recipientId: userId,
       isRead: false,
+      type: { notIn: visibleNotificationTypes(preferences) },
     },
   });
 }

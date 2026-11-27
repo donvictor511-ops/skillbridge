@@ -39,6 +39,11 @@ export interface Notification {
   actor: NotificationActor;
 }
 
+export interface NotificationInboxResponse {
+  data: Notification[];
+  nextCursor: string | null;
+}
+
 export interface MarkNotificationReadResponse {
   id: string;
   isRead: boolean;
@@ -47,4 +52,38 @@ export interface MarkNotificationReadResponse {
 export interface NotificationBatchActionResponse {
   updatedCount?: number;
   deletedCount?: number;
+}
+
+export interface NotificationPreferences {
+  inAppEnabled: boolean;
+  pushEnabled: boolean;
+  postLikes: boolean;
+  comments: boolean;
+  mentions: boolean;
+  messages: boolean;
+  connections: boolean;
+  groups: boolean;
+  marketplace: boolean;
+  platformUpdates: boolean;
+}
+
+export interface NotificationDevice {
+  id: string;
+  label: string;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+export interface NotificationSettings {
+  preferences: NotificationPreferences;
+  devices: NotificationDevice[];
+}
+
+export interface FirebaseWebConfig {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  appId: string;
+  messagingSenderId: string;
+  vapidKey: string;
 }

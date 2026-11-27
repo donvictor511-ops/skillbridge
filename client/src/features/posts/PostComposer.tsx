@@ -182,6 +182,7 @@ export function PostComposer() {
           <p className="mt-1 text-sm text-slate-500">
             Share your ideas, progress, or something useful with the community.
           </p>
+          <Link to={paths.savedPosts} className="mt-2 inline-flex text-sm font-semibold text-blue-700 hover:underline">View saved posts</Link>
         </div>
       </div>
 

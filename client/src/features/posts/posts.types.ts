@@ -24,6 +24,7 @@ export interface Post {
   commentsCount: number;
   isLikedByViewer: boolean;
   isRepostedByViewer: boolean;
+  isBookmarkedByViewer: boolean;
 }
 
 export interface PostComment {

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   getNotifications,
@@ -7,12 +7,20 @@ import {
   deleteNotification,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  getNotificationSettings,
+  updateNotificationPreferences,
+  registerNotificationDevice,
+  deleteNotificationDevice,
+  getNotificationInbox,
 } from "./notificationsService";
+import type { NotificationPreferences } from "./notifications.types";
 
 export const notificationKeys = {
   all: ["notifications"] as const,
   list: () => [...notificationKeys.all, "list"] as const,
   unreadCount: () => [...notificationKeys.all, "unread-count"] as const,
+  settings: () => [...notificationKeys.all, "settings"] as const,
+  inbox: (filter: "all" | "unread") => [...notificationKeys.all, "inbox", filter] as const,
 };
 
 export function useNotifications(
@@ -27,6 +35,47 @@ export function useNotifications(
     staleTime: 10_000,
     refetchInterval,
   });
+}
+
+export function useNotificationInbox(filter: "all" | "unread") {
+  return useInfiniteQuery({
+    queryKey: notificationKeys.inbox(filter),
+    queryFn: ({ pageParam }) => getNotificationInbox(pageParam, filter),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    retry: false,
+  });
+}
+
+export function useNotificationSettings() {
+  return useQuery({ queryKey: notificationKeys.settings(), queryFn: getNotificationSettings, retry: false });
+}
+
+function useRefreshNotificationSettings() {
+  const queryClient = useQueryClient();
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: notificationKeys.settings() }),
+      queryClient.invalidateQueries({ queryKey: notificationKeys.list() }),
+      queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() }),
+      queryClient.invalidateQueries({ queryKey: [...notificationKeys.all, "inbox"] }),
+    ]);
+  };
+}
+
+export function useUpdateNotificationPreferences() {
+  const refresh = useRefreshNotificationSettings();
+  return useMutation({ mutationFn: (input: Partial<NotificationPreferences>) => updateNotificationPreferences(input), onSuccess: refresh });
+}
+
+export function useRegisterNotificationDevice() {
+  const refresh = useRefreshNotificationSettings();
+  return useMutation({ mutationFn: registerNotificationDevice, onSuccess: refresh });
+}
+
+export function useDeleteNotificationDevice() {
+  const refresh = useRefreshNotificationSettings();
+  return useMutation({ mutationFn: deleteNotificationDevice, onSuccess: refresh });
 }
 
 export function useUnreadNotificationCount(
@@ -56,6 +105,9 @@ export function useMarkNotificationAsRead() {
         queryClient.invalidateQueries({
           queryKey: notificationKeys.unreadCount(),
         }),
+        queryClient.invalidateQueries({
+          queryKey: [...notificationKeys.all, "inbox"],
+        }),
       ]);
     },
   });
@@ -67,6 +119,7 @@ function useRefreshNotifications() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: notificationKeys.list() }),
       queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() }),
+      queryClient.invalidateQueries({ queryKey: [...notificationKeys.all, "inbox"] }),
     ]);
   };
 }

@@ -22,6 +22,7 @@ import {
   updatePost,
   reactToPost,
   toggleCommentLike,
+  setPostBookmark,
 } from "./postsService";
 
 import type {
@@ -39,14 +40,27 @@ export const postKeys = {
   comments: (postId: string) => [...postKeys.all, "comments", postId] as const,
 };
 
-export function usePosts() {
+export function usePosts(bookmarksOnly = false) {
   return useInfiniteQuery({
-    queryKey: postKeys.feed(),
-    queryFn: ({ pageParam }) => getPosts(pageParam),
+    queryKey: [...postKeys.feed(), bookmarksOnly ? "bookmarks" : "all"],
+    queryFn: ({ pageParam }) => getPosts(pageParam, 20, bookmarksOnly),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     retry: false,
     staleTime: 15_000,
+  });
+}
+
+export function useTogglePostBookmark() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ postId, save }: { postId: string; save: boolean }) => setPostBookmark(postId, save),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: postKeys.feed() }),
+        queryClient.invalidateQueries({ queryKey: [...postKeys.feed(), "bookmarks"] }),
+      ]);
+    },
   });
 }
 

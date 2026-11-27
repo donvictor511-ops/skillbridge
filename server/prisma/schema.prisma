@@ -262,7 +262,10 @@ model User {
   posts                   Post[]
   postLikes               PostLike[]
   postCommentLikes        PostCommentLike[]
+  postBookmarks           PostBookmark[]
   postComments            PostComment[]
+  notificationPreference  NotificationPreference?
+  notificationDevices     NotificationDevice[]
   conversationsLow        Conversation[]            @relation("ConversationLowUser")
   conversationsHigh       Conversation[]            @relation("ConversationHighUser")
   conversationMemberships ConversationParticipant[]
@@ -739,6 +742,38 @@ model Notification {
   @@map("notifications")
 }
 
+model NotificationPreference {
+  userId          String   @id @map("user_id") @db.Uuid
+  inAppEnabled    Boolean  @default(true) @map("in_app_enabled")
+  pushEnabled     Boolean  @default(false) @map("push_enabled")
+  postLikes       Boolean  @default(true) @map("post_likes")
+  comments        Boolean  @default(true)
+  mentions        Boolean  @default(true)
+  messages        Boolean  @default(true)
+  connections     Boolean  @default(true)
+  groups          Boolean  @default(true)
+  marketplace     Boolean  @default(true)
+  platformUpdates Boolean  @default(true) @map("platform_updates")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model NotificationDevice {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  token      String   @unique @db.VarChar(4096)
+  label      String   @default("Browser") @db.VarChar(100)
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lastSeenAt])
+  @@map("notification_devices")
+}
+
 model Post {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   authorId   String   @map("author_id") @db.Uuid
@@ -756,6 +791,7 @@ model Post {
   likes    PostLike[]
   comments PostComment[]
   reports  PostReport[]
+  bookmarks PostBookmark[]
 
   @@unique([authorId, repostOfId])
   @@index([createdAt])
@@ -776,6 +812,18 @@ model PostLike {
   @@id([postId, userId])
   @@index([userId])
   @@map("post_likes")
+}
+
+model PostBookmark {
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId, createdAt])
+  @@map("post_bookmarks")
 }
 
 model PostComment {

@@ -22,6 +22,9 @@ export interface Env {
   linkedinClientSecret?: string;
   githubClientId?: string;
   githubClientSecret?: string;
+  firebaseAdmin: { projectId: string; clientEmail: string; privateKey: string } | null;
+  firebaseWeb: { apiKey: string; authDomain: string; projectId: string; appId: string; messagingSenderId: string } | null;
+  firebaseVapidKey?: string;
 }
 
 function readNodeEnv(value: string | undefined): NodeEnv {
@@ -89,4 +92,21 @@ export const env: Env = {
   linkedinClientSecret: process.env.LINKEDIN_CLIENT_SECRET?.trim() || undefined,
   githubClientId: process.env.GITHUB_CLIENT_ID?.trim() || undefined,
   githubClientSecret: process.env.GITHUB_CLIENT_SECRET?.trim() || undefined,
+  firebaseAdmin: process.env.FIREBASE_PROJECT_ID?.trim() && process.env.FIREBASE_CLIENT_EMAIL?.trim() && process.env.FIREBASE_PRIVATE_KEY?.trim()
+    ? {
+        projectId: process.env.FIREBASE_PROJECT_ID.trim(),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL.trim(),
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n").trim(),
+      }
+    : null,
+  firebaseWeb: process.env.FIREBASE_WEB_API_KEY?.trim() && process.env.FIREBASE_WEB_AUTH_DOMAIN?.trim() && process.env.FIREBASE_WEB_PROJECT_ID?.trim() && process.env.FIREBASE_WEB_APP_ID?.trim() && process.env.FIREBASE_WEB_MESSAGING_SENDER_ID?.trim()
+    ? {
+        apiKey: process.env.FIREBASE_WEB_API_KEY.trim(),
+        authDomain: process.env.FIREBASE_WEB_AUTH_DOMAIN.trim(),
+        projectId: process.env.FIREBASE_WEB_PROJECT_ID.trim(),
+        appId: process.env.FIREBASE_WEB_APP_ID.trim(),
+        messagingSenderId: process.env.FIREBASE_WEB_MESSAGING_SENDER_ID.trim(),
+      }
+    : null,
+  firebaseVapidKey: process.env.FIREBASE_VAPID_KEY?.trim() || undefined,
 };

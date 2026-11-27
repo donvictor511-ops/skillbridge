@@ -16,13 +16,17 @@ const groups: Array<{ key: Exclude<Filter, "all">; title: string; icon: typeof U
 ];
 
 export function SearchPage(): ReactElement {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const query = params.get("q")?.trim() ?? "";
+  return <SearchResults key={query} query={query} />;
+}
+
+function SearchResults({ query }: { query: string }): ReactElement {
+  const [, setParams] = useSearchParams();
   const [draft, setDraft] = useState(query);
   const [filter, setFilter] = useState<Filter>("all");
   const results = useGlobalSearch(query);
   useEffect(() => { document.title = query ? `Search: ${query} | SkillBridge` : "Search | SkillBridge"; }, [query]);
-  useEffect(() => setDraft(query), [query]);
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (draft.trim().length >= 2) { setFilter("all"); setParams({ q: draft.trim() }); } }
 
   const groupData = results.data?.groups;

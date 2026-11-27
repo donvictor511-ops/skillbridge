@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
-import { Bell, Check, CheckCheck, LoaderCircle, Trash2 } from "lucide-react";
+import { Bell, Check, LoaderCircle, Trash2 } from "lucide-react";
 
 import { paths } from "../../app/paths";
 import { profilePath } from "../../app/paths";
@@ -362,14 +362,18 @@ export function NotificationBell(): ReactElement {
             <div className="border-t border-line px-4 py-3">
               <button
                 type="button"
-                onClick={() => navigate(paths.connections)}
+                onClick={() => { setIsOpen(false); navigate(paths.notifications); }}
                 className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand-hover"
               >
-                <CheckCheck className="h-4 w-4" />
-                View connections
+                <Bell className="h-4 w-4" />
+                View all notifications
               </button>
             </div>
           )}
+
+          <div className="border-t border-line px-4 py-3">
+            <button type="button" onClick={() => { setIsOpen(false); navigate(paths.notificationSettings); }} className="text-sm font-semibold text-brand hover:text-brand-hover">Notification settings</button>
+          </div>
 
           {(markAllAsReadMutation.isError ||
             deleteMutation.isError ||
