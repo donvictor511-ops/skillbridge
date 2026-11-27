@@ -34,6 +34,7 @@ export function useNotifications(
     retry: false,
     staleTime: 10_000,
     refetchInterval,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -89,6 +90,7 @@ export function useUnreadNotificationCount(
     retry: false,
     staleTime: 10_000,
     refetchInterval,
+    refetchIntervalInBackground: true,
   });
 }
 

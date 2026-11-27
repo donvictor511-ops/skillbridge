@@ -144,6 +144,10 @@ export function NotificationBell(): ReactElement {
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
+    () => ("Notification" in window ? window.Notification.permission : "denied"),
+  );
+  const seenNotificationIds = useRef<Set<string> | null>(null);
 
   const {
     data: notifications,
@@ -155,6 +159,49 @@ export function NotificationBell(): ReactElement {
     true,
     NOTIFICATION_REFRESH_INTERVAL_MS,
   );
+
+  useEffect(() => {
+    if (!notifications) return;
+
+    const currentIds = new Set(notifications.map((notification) => notification.id));
+    if (seenNotificationIds.current === null) {
+      seenNotificationIds.current = currentIds;
+      return;
+    }
+
+    const newNotifications = notifications.filter(
+      (notification) => !seenNotificationIds.current?.has(notification.id),
+    );
+    seenNotificationIds.current = currentIds;
+
+    if (
+      document.visibilityState !== "hidden" ||
+      notificationPermission !== "granted" ||
+      !("Notification" in window)
+    ) {
+      return;
+    }
+
+    for (const notification of newNotifications) {
+      const actorName = notification.actor.profile?.displayName;
+      const title = actorName ? `SkillBridge · ${actorName}` : "SkillBridge notification";
+      const desktopNotification = new window.Notification(title, {
+        body: notification.message,
+        tag: notification.id,
+        icon: "/favicon.ico",
+      });
+      desktopNotification.onclick = () => {
+        window.focus();
+        desktopNotification.close();
+      };
+    }
+  }, [notifications, notificationPermission]);
+
+  async function enableDesktopNotifications(): Promise<void> {
+    if (!("Notification" in window)) return;
+    const permission = await window.Notification.requestPermission();
+    setNotificationPermission(permission);
+  }
 
   const markAsReadMutation = useMarkNotificationAsRead();
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
@@ -300,6 +347,25 @@ export function NotificationBell(): ReactElement {
               </span>
             )}
           </div>
+
+          {notificationPermission !== "granted" && (
+            <div className="border-b border-line px-4 py-3">
+              <p className="text-sm text-ink">
+                {notificationPermission === "denied"
+                  ? "Desktop notifications are blocked in your browser settings."
+                  : "Get alerts when new notifications arrive while SkillBridge is in the background."}
+              </p>
+              {notificationPermission === "default" && (
+                <button
+                  type="button"
+                  onClick={() => void enableDesktopNotifications()}
+                  className="mt-2 text-sm font-semibold text-brand hover:text-brand-hover"
+                >
+                  Enable desktop notifications
+                </button>
+              )}
+            </div>
+          )}
 
           {notifications && notifications.length > 0 && (
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2">
