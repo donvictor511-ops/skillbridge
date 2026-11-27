@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactElement } from "react";
 import { isAxiosError } from "axios";
+import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router";
 import { Archive, ChevronLeft, Copy, MessageCircle, MoreVertical, Send, Trash2, Phone, Video, PhoneCall, PhoneMissed, ImagePlus, X, Maximize2, Reply, SmilePlus } from "lucide-react";
 
@@ -50,6 +51,9 @@ export function MessagesPage(): ReactElement {
   const [typingConversationIds, setTypingConversationIds] = useState<Set<string>>(() => new Set());
   const typingConversationIdsRef = useRef<Set<string>>(new Set());
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [messageMenuPosition, setMessageMenuPosition] = useState({ top: 8, left: 8 });
+  const messageMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const messageMenuPanelRef = useRef<HTMLDivElement | null>(null);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
   const [messageError, setMessageError] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
@@ -137,6 +141,43 @@ export function MessagesPage(): ReactElement {
     return () => {
       document.removeEventListener("pointerdown", dismissMenu);
       document.removeEventListener("keydown", dismissMenu);
+    };
+  }, [activeMenuId]);
+
+  useLayoutEffect(() => {
+    if (!activeMenuId) return;
+
+    function positionMenu() {
+      const trigger = messageMenuTriggerRef.current;
+      const panel = messageMenuPanelRef.current;
+      if (!trigger || !panel) return;
+
+      const anchor = trigger.getBoundingClientRect();
+      const menu = panel.getBoundingClientRect();
+      const margin = 8;
+      const maxLeft = Math.max(margin, window.innerWidth - menu.width - margin);
+      const left = Math.max(margin, Math.min(anchor.right - menu.width, maxLeft));
+      const spaceBelow = window.innerHeight - anchor.bottom - margin;
+      const spaceAbove = anchor.top - margin;
+      const proposedTop = spaceBelow >= menu.height || spaceBelow >= spaceAbove
+        ? anchor.bottom + 4
+        : anchor.top - menu.height - 4;
+      const maxTop = Math.max(margin, window.innerHeight - menu.height - margin);
+      const top = Math.max(margin, Math.min(proposedTop, maxTop));
+
+      setMessageMenuPosition((current) =>
+        Math.abs(current.left - left) < 1 && Math.abs(current.top - top) < 1
+          ? current
+          : { top, left },
+      );
+    }
+
+    positionMenu();
+    window.addEventListener("resize", positionMenu);
+    window.addEventListener("scroll", positionMenu, true);
+    return () => {
+      window.removeEventListener("resize", positionMenu);
+      window.removeEventListener("scroll", positionMenu, true);
     };
   }, [activeMenuId]);
 
@@ -410,18 +451,18 @@ export function MessagesPage(): ReactElement {
                           </div>
                           {!message.isDeleted ? (
                             <div data-message-menu className="absolute right-1 top-1 z-30">
-                              <button type="button" onClick={() => setActiveMenuId(menuOpen ? null : message.id)} aria-label="Message options" aria-haspopup="menu" aria-expanded={menuOpen} className={`grid min-h-9 min-w-9 place-items-center rounded-full bg-surface/90 text-muted shadow-sm hover:bg-surface hover:text-navy focus:opacity-100 ${menuOpen ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100"}`}>
+                              <button type="button" onClick={(event) => { if (menuOpen) { setActiveMenuId(null); } else { messageMenuTriggerRef.current = event.currentTarget; setActiveMenuId(message.id); } }} aria-label="Message options" aria-haspopup="menu" aria-expanded={menuOpen} className={`grid min-h-9 min-w-9 place-items-center rounded-full bg-surface/90 text-muted shadow-sm hover:bg-surface hover:text-navy focus:opacity-100 ${menuOpen ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100"}`}>
                                 <MoreVertical className="h-4 w-4" />
                               </button>
-                              {menuOpen ? (
-                                <div role="menu" aria-label="Message options" className="absolute right-0 top-full z-40 mt-1 w-48 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-surface p-1.5 text-ink shadow-card">
+                              {menuOpen ? createPortal(
+                                <div ref={messageMenuPanelRef} data-message-menu role="menu" aria-label="Message options" style={{ top: messageMenuPosition.top, left: messageMenuPosition.left }} className="fixed z-[100] max-h-[calc(100dvh-1rem)] w-48 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-line bg-surface p-1.5 text-ink shadow-card">
                                   <button type="button" role="menuitem" onClick={() => void copyMessage(message)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-page"><Copy className="h-4 w-4" />Copy</button>
                                   <button type="button" role="menuitem" onClick={() => { setActiveMenuId(null); setReplyTarget(message); setReactionPickerId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-page"><Reply className="h-4 w-4" />Reply</button>
                                   <button type="button" role="menuitem" onClick={() => { setActiveMenuId(null); setReactionPickerId(reactionPickerId === message.id ? null : message.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-page"><SmilePlus className="h-4 w-4" />React</button>
                                   {isMine && now - new Date(message.createdAt).getTime() <= 15 * 60_000 ? <button type="button" role="menuitem" onClick={() => { setActiveMenuId(null); setEditingId(message.id); setEditDraft(message.content); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-page">Edit message</button> : null}
                                   <button type="button" role="menuitem" onClick={() => void removeMessage(message, "me")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-page"><Trash2 className="h-4 w-4" />Delete for me</button>
                                   {isMine ? <button type="button" role="menuitem" onClick={() => void removeMessage(message, "everyone")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-danger-strong hover:bg-danger/10"><Trash2 className="h-4 w-4" />Delete for everyone</button> : null}
-                                </div>
+                                </div>, document.body,
                               ) : null}
                             </div>
                           ) : null}

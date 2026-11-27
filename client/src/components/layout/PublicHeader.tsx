@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
-import { Menu, X, ArrowLeft, House, Compass, BriefcaseBusiness, MessageCircle, UsersRound, MoreHorizontal, FolderKanban, Sparkles, UserRound, Shield, LayoutDashboard } from "lucide-react";
+import { Menu, X, ArrowLeft, House, Compass, BriefcaseBusiness, MessageCircle, UsersRound, MoreHorizontal, FolderKanban, Sparkles, UserRound, Shield, LayoutDashboard, Settings } from "lucide-react";
 
 import { paths } from "../../app/paths";
 import { useCurrentUser } from "../../features/auth/authQueries";
@@ -114,7 +114,7 @@ export function PublicHeader(): ReactElement {
   const [openPath, setOpenPath] = useState<string | null>(null);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const isMenuOpen = openPath === location.pathname;
-  const isMoreRouteActive = [paths.communities, paths.projects, paths.aiCareer, paths.myProfile, paths.guidelines, paths.admin].some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`));
+  const isMoreRouteActive = [paths.communities, paths.projects, paths.aiCareer, paths.myProfile, paths.guidelines, paths.notificationSettings, paths.admin].some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`));
 
   function toggleMenu(): void {
     setOpenPath(isMenuOpen ? null : location.pathname);
@@ -180,7 +180,7 @@ export function PublicHeader(): ReactElement {
             {isOnboarded ? <div ref={moreMenuRef} className="relative">
               <button type="button" aria-expanded={isMoreOpen} onClick={() => setIsMoreOpen((open) => !open)} className={cn("flex h-12 min-w-[4.25rem] flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-[11px] font-medium text-muted hover:bg-page hover:text-navy", (isMoreOpen || isMoreRouteActive) && "bg-page text-navy")}><MoreHorizontal className="h-[18px] w-[18px]" />More</button>
               {isMoreOpen ? <div className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-line bg-surface p-2 shadow-card">{[
-                { label: "Communities", to: paths.communities, icon: UsersRound }, { label: "Projects", to: paths.projects, icon: FolderKanban }, { label: "AI Studio", to: paths.aiCareer, icon: Sparkles }, { label: "My profile", to: paths.myProfile, icon: UserRound }, { label: "Community guidelines", to: paths.guidelines, icon: Shield }, ...(user?.role === "admin" ? [{ label: "Admin", to: paths.admin, icon: Shield }] : []),
+                { label: "Communities", to: paths.communities, icon: UsersRound }, { label: "Projects", to: paths.projects, icon: FolderKanban }, { label: "AI Studio", to: paths.aiCareer, icon: Sparkles }, { label: "My profile", to: paths.myProfile, icon: UserRound }, { label: "Notification settings", to: paths.notificationSettings, icon: Settings }, { label: "Community guidelines", to: paths.guidelines, icon: Shield }, ...(user?.role === "admin" ? [{ label: "Admin", to: paths.admin, icon: Shield }] : []),
               ].map(({ label, to, icon: Icon }) => <NavLink key={to} to={to} onClick={() => setIsMoreOpen(false)} className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm", isActive ? "bg-brand/10 font-semibold text-navy" : "text-ink hover:bg-page")}><Icon className="h-4 w-4 text-brand" />{label}</NavLink>)}</div> : null}
             </div> : null}
           </nav>
@@ -340,7 +340,7 @@ export function PublicHeader(): ReactElement {
         <div ref={mobileMoreMenuRef} className="relative flex min-w-0 flex-1">
           <button type="button" aria-expanded={isMoreOpen} onClick={() => setIsMoreOpen((open) => !open)} className={cn("flex w-full flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[11px]", (isMoreOpen || isMoreRouteActive) ? "font-semibold text-brand" : "text-muted hover:bg-page hover:text-navy")}><MoreHorizontal className="h-5 w-5" aria-hidden="true" /><span>More</span></button>
           {isMoreOpen ? <div className="absolute bottom-[calc(100%+0.5rem)] right-0 z-50 grid w-56 grid-cols-2 gap-1 rounded-2xl border border-line bg-surface p-2 shadow-card">{[
-            { label: "Dashboard", to: paths.dashboard, icon: LayoutDashboard }, { label: "Communities", to: paths.communities, icon: UsersRound }, { label: "Jobs", to: paths.jobs, icon: BriefcaseBusiness }, { label: "Projects", to: paths.projects, icon: FolderKanban }, { label: "AI Studio", to: paths.aiCareer, icon: Sparkles }, { label: "My profile", to: paths.myProfile, icon: UserRound }, ...(user?.role === "admin" ? [{ label: "Admin", to: paths.admin, icon: Shield }] : []), { label: "Guidelines", to: paths.guidelines, icon: Shield },
+            { label: "Dashboard", to: paths.dashboard, icon: LayoutDashboard }, { label: "Communities", to: paths.communities, icon: UsersRound }, { label: "Jobs", to: paths.jobs, icon: BriefcaseBusiness }, { label: "Projects", to: paths.projects, icon: FolderKanban }, { label: "AI Studio", to: paths.aiCareer, icon: Sparkles }, { label: "My profile", to: paths.myProfile, icon: UserRound }, { label: "Notification settings", to: paths.notificationSettings, icon: Settings }, ...(user?.role === "admin" ? [{ label: "Admin", to: paths.admin, icon: Shield }] : []), { label: "Guidelines", to: paths.guidelines, icon: Shield },
           ].map(({ label, to, icon: Icon }) => <NavLink key={to} to={to} onClick={() => setIsMoreOpen(false)} className={({ isActive }) => cn("flex flex-col items-center gap-1 rounded-xl px-2 py-2.5 text-center text-[11px]", isActive ? "bg-brand/10 font-semibold text-brand" : "text-ink hover:bg-page")}><Icon className="h-4 w-4" aria-hidden="true" />{label}</NavLink>)}</div> : null}
         </div>
       </div>
