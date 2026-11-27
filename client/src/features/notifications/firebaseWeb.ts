@@ -9,6 +9,24 @@ function supportedBrowser(): boolean {
   return typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator;
 }
 
+function browserDeviceLabel(): string {
+  const userAgent = navigator.userAgent;
+  const browser = /SamsungBrowser/i.test(userAgent) ? "Samsung Internet"
+    : /EdgA?|EdgiOS/i.test(userAgent) ? "Edge"
+      : /OPR|Opera/i.test(userAgent) ? "Opera"
+        : /CriOS|Chrome/i.test(userAgent) ? "Chrome"
+          : /Firefox/i.test(userAgent) ? "Firefox"
+            : /Safari/i.test(userAgent) ? "Safari"
+              : "Web browser";
+  const platform = /Android/i.test(userAgent) ? "Android"
+    : /iPhone|iPad|iPod/i.test(userAgent) ? "iPhone/iPad"
+      : /Windows/i.test(userAgent) ? "Windows"
+        : /Macintosh|Mac OS/i.test(userAgent) ? "Mac"
+          : /Linux/i.test(userAgent) ? "Linux"
+            : "device";
+  return `${browser} on ${platform}`;
+}
+
 export async function enableBrowserPush(): Promise<void> {
   if (!supportedBrowser() || !(await isSupported())) {
     throw new Error("This browser does not support background notifications.");
@@ -19,6 +37,9 @@ export async function enableBrowserPush(): Promise<void> {
 
   let permission = Notification.permission;
   if (permission === "default") permission = await Notification.requestPermission();
+  if (permission === "denied") {
+    throw new Error("Notifications are blocked for this site. Allow them in your browser's site settings, then try again.");
+  }
   if (permission !== "granted") throw new Error("Allow notifications in your browser to enable push alerts.");
 
   const app = getApps().find((candidate) => candidate.name === firebaseAppName)
@@ -28,7 +49,7 @@ export async function enableBrowserPush(): Promise<void> {
   const registration = await navigator.serviceWorker.register(workerUrl, { scope: "/" });
   const token = await getToken(messaging, { vapidKey: config.vapidKey, serviceWorkerRegistration: registration });
   if (!token) throw new Error("Firebase did not return a browser registration token.");
-  await registerNotificationDevice({ token, label: "This browser" });
+  await registerNotificationDevice({ token, label: browserDeviceLabel() });
 }
 
 export async function removeCurrentBrowserPush(): Promise<void> {

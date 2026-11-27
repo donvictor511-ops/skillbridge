@@ -64,6 +64,10 @@ export function NotificationSettingsPage() {
         <PreferenceRow label="In-app notifications" description="Show updates in your SkillBridge notification center." checked={preferences.inAppEnabled} disabled={preferencesMutation.isPending} onChange={(value) => void setPreference("inAppEnabled", value)} />
         <PreferenceRow label="Browser push notifications" description="Receive alerts when this site is not open, subject to browser and device support." checked={preferences.pushEnabled} disabled={preferencesMutation.isPending || busy} onChange={(value) => value ? void enablePush() : void setPreference("pushEnabled", false)} actionLabel={preferences.pushEnabled ? "Enabled" : "Enable on this browser"} />
       </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-page p-3">
+        <p className="max-w-xl text-sm text-muted">Each phone or computer must be registered separately, even when browser push is already enabled for your account.</p>
+        <button type="button" onClick={() => void enablePush()} disabled={preferencesMutation.isPending || busy} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50">{busy ? "Setting up…" : "Set up this browser"}</button>
+      </div>
       {!browserPushSupported() ? <p className="mt-3 text-sm text-muted">This browser does not support web push notifications.</p> : null}
     </Card>
     <Card>
