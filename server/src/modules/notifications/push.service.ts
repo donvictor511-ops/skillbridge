@@ -24,6 +24,7 @@ const pushCategory = {
   message: "messages",
   connection_request: "connections",
   connection_accepted: "connections",
+  follow: "connections",
   community_post: "groups",
   community_invite: "groups",
   job_application: "marketplace",
