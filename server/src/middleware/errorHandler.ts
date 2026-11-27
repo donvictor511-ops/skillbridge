@@ -39,8 +39,8 @@ function logUnexpectedError(error: unknown, requestPath: string): void {
   const name = error instanceof Error ? error.name : "UnknownError";
   const details: Record<string, unknown> = { name, path: requestPath };
 
-  // Log only safe database identifiers. Never log the full error, SQL,
-  // request body, or credentials.
+  // Log safe database identifiers such as Prisma code, model, and column.
+  // Never log full errors, SQL, request bodies, or credentials.
   if (typeof error === "object" && error !== null && "code" in error) {
     const code = error.code;
     if (typeof code === "string" && /^P\d{4}$/.test(code)) {
