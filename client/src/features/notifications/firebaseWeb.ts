@@ -1,15 +1,29 @@
 import { getApps, initializeApp } from "firebase/app";
 import { deleteToken, getMessaging, getToken, isSupported } from "firebase/messaging";
-import { apiBaseURL } from "../../services/apiClient";
 import { getFirebaseWebConfig, registerNotificationDevice } from "./notificationsService";
 
 const firebaseAppName = "skillbridge-web-push";
+const browserIdStorageKey = "skillbridge.pushDeviceId";
+let fallbackBrowserId: string | null = null;
 
 function supportedBrowser(): boolean {
   return typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator;
 }
 
-function browserDeviceLabel(): string {
+function browserDeviceId(): string {
+  try {
+    const existing = localStorage.getItem(browserIdStorageKey);
+    if (existing) return existing;
+    const created = crypto.randomUUID();
+    localStorage.setItem(browserIdStorageKey, created);
+    return created;
+  } catch {
+    fallbackBrowserId ??= crypto.randomUUID();
+    return fallbackBrowserId;
+  }
+}
+
+export function currentBrowserDeviceLabel(): string {
   const userAgent = navigator.userAgent;
   const browser = /SamsungBrowser/i.test(userAgent) ? "Samsung Internet"
     : /EdgA?|EdgiOS/i.test(userAgent) ? "Edge"
@@ -24,7 +38,7 @@ function browserDeviceLabel(): string {
         : /Macintosh|Mac OS/i.test(userAgent) ? "Mac"
           : /Linux/i.test(userAgent) ? "Linux"
             : "device";
-  return `${browser} on ${platform}`;
+  return `${browser} on ${platform} · ${browserDeviceId().slice(0, 8)}`;
 }
 
 export async function enableBrowserPush(): Promise<void> {
@@ -45,11 +59,18 @@ export async function enableBrowserPush(): Promise<void> {
   const app = getApps().find((candidate) => candidate.name === firebaseAppName)
     ?? initializeApp({ apiKey: config.apiKey, authDomain: config.authDomain, projectId: config.projectId, appId: config.appId, messagingSenderId: config.messagingSenderId }, firebaseAppName);
   const messaging = getMessaging(app);
-  const workerUrl = `/firebase-messaging-sw.js?apiBaseUrl=${encodeURIComponent(apiBaseURL)}`;
+  const workerParams = new URLSearchParams({
+    apiKey: config.apiKey,
+    authDomain: config.authDomain,
+    projectId: config.projectId,
+    appId: config.appId,
+    messagingSenderId: config.messagingSenderId,
+  });
+  const workerUrl = `/firebase-messaging-sw.js?${workerParams.toString()}`;
   const registration = await navigator.serviceWorker.register(workerUrl, { scope: "/" });
   const token = await getToken(messaging, { vapidKey: config.vapidKey, serviceWorkerRegistration: registration });
   if (!token) throw new Error("Firebase did not return a browser registration token.");
-  await registerNotificationDevice({ token, label: browserDeviceLabel() });
+  await registerNotificationDevice({ token, label: currentBrowserDeviceLabel() });
 }
 
 export async function removeCurrentBrowserPush(): Promise<void> {

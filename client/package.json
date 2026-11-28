@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test:push-worker": "node --test tests/firebaseMessagingWorker.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

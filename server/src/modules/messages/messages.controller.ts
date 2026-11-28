@@ -2,16 +2,25 @@ import type { Request, Response } from "express";
 import { AppError } from "../../utils/appError";
 import {
   archiveConversation, createOrGetConversation, deleteMessage,
-  editMessage as editMessageService, getConversation, getMessageHistory, listConversationCalls, getUnreadMessageCount, listPresencePeerIds,
+  editMessage as editMessageService, getConversation, getMessageHistory, listConversationCalls, getUnreadMessageCount,
   listConversations, markConversationRead, restoreConversation, sendMessage, toggleMessageReaction,
 } from "./messages.service";
-import { addEventStream, isUserOnline, publishToUser, removeEventStream, sendEvent } from "./messages.realtime";
+import { addEventStream, publishToUser, removeEventStream, sendEvent } from "./messages.realtime";
+import { listPresencePeerIds } from "./presencePeers";
+import {
+  disconnectPresenceSession,
+  endPresenceSession,
+  newPresenceSessionId,
+  onlineUserIds,
+  refreshPresenceSession,
+  registerPresenceSession,
+} from "./presence.runtime";
 import {
   conversationListQuerySchema, conversationParamsSchema, createConversationSchema,
   createMessageSchema, messageListQuerySchema, messageParamsSchema,
   deleteMessageSchema, updateMessageSchema,
   messageReactionSchema,
-  messageTypingSchema,
+  messageTypingSchema, presenceHeartbeatSchema,
 } from "./messages.schema";
 
 function user(req: Request) {
@@ -26,19 +35,69 @@ export async function openEvents(req: Request, res: Response): Promise<void> {
   res.set({ "Content-Type": "text/event-stream", "Cache-Control": "private, no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
   res.flushHeaders();
   res.write("retry: 3000\n\n");
-  const becameOnline = addEventStream(current.id, res);
-  const peers = await listPresencePeerIds(current.id);
-  for (const peerId of peers) sendEvent(res, "presence.changed", { userId: peerId, isOnline: isUserOnline(peerId) });
-  if (becameOnline) for (const peerId of peers) publishToUser(peerId, "presence.changed", { userId: current.id, isOnline: true });
-  const heartbeat = setInterval(() => { if (!res.writableEnded) res.write(": keep-alive\n\n"); }, 25000);
-  res.on("close", () => {
-    clearInterval(heartbeat);
-    if (removeEventStream(current.id, res)) {
-      void listPresencePeerIds(current.id).then((connectedPeers) => {
-        for (const peerId of connectedPeers) publishToUser(peerId, "presence.changed", { userId: current.id, isOnline: false });
-      });
+  const sessionId = newPresenceSessionId();
+  addEventStream(current.id, res);
+  let heartbeat: NodeJS.Timeout | null = null;
+  let cleanedUp = false;
+  let registered = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    if (heartbeat) clearInterval(heartbeat);
+    removeEventStream(current.id, res);
+    if (registered) void disconnectPresenceSession(sessionId).catch(() => {
+      console.warn("Presence session cleanup failed; the stale-session timeout will expire it.");
+    });
+  };
+
+  // Register cleanup before awaiting the peer lookup so a fast tab close cannot
+  // leave this stream in the in-memory presence map indefinitely.
+  res.once("close", cleanup);
+  res.once("error", cleanup);
+  heartbeat = setInterval(() => {
+    if (res.writableEnded || res.destroyed) {
+      cleanup();
+      return;
     }
-  });
+    try { res.write(": keep-alive\n\n"); }
+    catch {
+      cleanup();
+    }
+  }, 25000);
+
+  try {
+    await registerPresenceSession(sessionId, current.id);
+    registered = true;
+    if (cleanedUp || res.writableEnded || res.destroyed) {
+      await disconnectPresenceSession(sessionId);
+      return;
+    }
+    sendEvent(res, "presence.session", { sessionId });
+    const peers = await listPresencePeerIds(current.id);
+    if (cleanedUp || res.writableEnded || res.destroyed) return;
+    const onlinePeers = await onlineUserIds(peers);
+    if (cleanedUp || res.writableEnded || res.destroyed) return;
+    for (const peerId of peers) sendEvent(res, "presence.changed", { userId: peerId, isOnline: onlinePeers.has(peerId) });
+  } catch {
+    // Let EventSource reconnect if the initial presence snapshot cannot be read.
+    console.warn("Could not initialize a presence event stream; EventSource will reconnect.");
+    res.end();
+  }
+}
+
+export async function presenceHeartbeat(req: Request, res: Response): Promise<void> {
+  const current = user(req);
+  const { sessionId, ended } = presenceHeartbeatSchema.parse(req.body);
+  if (ended) {
+    await endPresenceSession(sessionId, current.id);
+    res.status(204).end();
+    return;
+  }
+  if (!(await refreshPresenceSession(sessionId, current.id))) {
+    res.status(410).json({ error: { code: "PRESENCE_SESSION_EXPIRED", message: "Presence session expired. Reconnecting." } });
+    return;
+  }
+  res.status(204).end();
 }
 
 export async function unreadCount(req: Request, res: Response): Promise<void> {

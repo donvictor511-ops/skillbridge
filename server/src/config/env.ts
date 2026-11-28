@@ -25,6 +25,7 @@ export interface Env {
   firebaseAdmin: { projectId: string; clientEmail: string; privateKey: string } | null;
   firebaseWeb: { apiKey: string; authDomain: string; projectId: string; appId: string; messagingSenderId: string } | null;
   firebaseVapidKey?: string;
+  firebaseDeviceTokenEncryptionKey: Buffer | null;
 }
 
 function readNodeEnv(value: string | undefined): NodeEnv {
@@ -109,4 +110,10 @@ export const env: Env = {
       }
     : null,
   firebaseVapidKey: process.env.FIREBASE_VAPID_KEY?.trim() || undefined,
+  firebaseDeviceTokenEncryptionKey: (() => {
+    const value = process.env.FIREBASE_DEVICE_TOKEN_ENCRYPTION_KEY?.trim();
+    if (!value) return null;
+    const key = Buffer.from(value, "base64");
+    return key.length === 32 ? key : null;
+  })(),
 };

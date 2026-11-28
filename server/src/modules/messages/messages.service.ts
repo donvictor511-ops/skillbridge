@@ -1,7 +1,8 @@
 import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../db/prisma";
 import { AppError } from "../../utils/appError";
-import { isUserOnline, publishToUser } from "./messages.realtime";
+import { publishToUser } from "./messages.realtime";
+import { isUserOnline } from "./presence.runtime";
 import type {
   ConversationListQuery,
   CreateConversationInput,
@@ -85,14 +86,14 @@ function notFound(): AppError {
   return new AppError(404, "CONVERSATION_NOT_FOUND", "Conversation not found.");
 }
 
-function otherUser(row: ConversationRow, viewerId: string) {
+function otherUser(row: ConversationRow, viewerId: string, isOnline: boolean) {
   const user = row.userLowId === viewerId ? row.userHigh : row.userLow;
   return {
     userId: user.id,
     displayName: user.profile?.displayName ?? "Unavailable profile",
     headline: user.profile?.headline ?? null,
     avatarUrl: user.profile?.avatarUrl ?? null,
-    isOnline: isUserOnline(user.id),
+    isOnline,
   };
 }
 
@@ -172,7 +173,8 @@ async function formatConversation(row: ConversationRow, viewerId: string) {
   const hiddenForViewer = lastMessage && (row.userLowId === viewerId
     ? lastMessage.deletedForLowAt !== null
     : lastMessage.deletedForHighAt !== null);
-  const [messageUnreadCount, callHistory] = await Promise.all([unreadCountForConversation(
+  const other = row.userLowId === viewerId ? row.userHigh : row.userLow;
+  const [messageUnreadCount, callHistory, isOnline] = await Promise.all([unreadCountForConversation(
     row.id,
     viewerId,
     participant.lastReadAt,
@@ -180,7 +182,7 @@ async function formatConversation(row: ConversationRow, viewerId: string) {
   ), prisma.callSession.findMany({
     where: { conversationId: row.id }, orderBy: { createdAt: "desc" }, take: 20,
     select: { id: true, mode: true, status: true, createdAt: true, endedAt: true, createdById: true, participants: { select: { userId: true, status: true, joinedAt: true } } },
-  })]);
+  }), isUserOnline(other.id)]);
   const latestCall = callHistory[0] ?? null;
   const unreadMissedCalls = callHistory.filter((call) => call.status === "ended" && call.createdById !== viewerId && (!participant.lastReadAt || call.createdAt > participant.lastReadAt) && call.participants.some((item) => item.userId === viewerId && item.status === "invited" && item.joinedAt === null)).length;
   const unreadCount = messageUnreadCount + unreadMissedCalls;
@@ -194,7 +196,7 @@ async function formatConversation(row: ConversationRow, viewerId: string) {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     archivedAt: participant.archivedAt?.toISOString() ?? null,
-    otherUser: otherUser(row, viewerId),
+    otherUser: otherUser(row, viewerId, isOnline),
     unreadCount,
     lastMessage: callIsLatest && latestCall && callPreview ? {
       id: latestCall.id,
@@ -232,26 +234,6 @@ async function findConversationRow(
   const otherUserId = conversation.userLowId === viewerId ? conversation.userHighId : conversation.userLowId;
   if (await usersHaveBlockedEachOther(viewerId, otherUserId)) throw notFound();
   return conversation;
-}
-
-export async function listPresencePeerIds(userId: string): Promise<string[]> {
-  const connections = await prisma.connection.findMany({
-    where: {
-      status: "accepted",
-      OR: [{ userLowId: userId }, { userHighId: userId }],
-    },
-    select: { userLowId: true, userHighId: true },
-  });
-
-  const conversations = await prisma.conversation.findMany({
-    where: { participants: { some: { userId } } },
-    select: { userLowId: true, userHighId: true },
-  });
-
-  return [...new Set([
-    ...connections.map((connection) => connection.userLowId === userId ? connection.userHighId : connection.userLowId),
-    ...conversations.map((conversation) => conversation.userLowId === userId ? conversation.userHighId : conversation.userLowId),
-  ])];
 }
 
 export async function createOrGetConversation(

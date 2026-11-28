@@ -5,7 +5,7 @@ import { ErrorMessage } from "../../components/ui/ErrorMessage";
 import { Spinner } from "../../components/ui/Spinner";
 import { useDeleteNotificationDevice, useNotificationSettings, useUpdateNotificationPreferences } from "./notificationsQueries";
 import type { NotificationPreferences } from "./notifications.types";
-import { browserPushSupported, enableBrowserPush, removeCurrentBrowserPush } from "./firebaseWeb";
+import { browserPushSupported, currentBrowserDeviceLabel, enableBrowserPush, removeCurrentBrowserPush } from "./firebaseWeb";
 
 const categories: Array<{ key: keyof Pick<NotificationPreferences, "postLikes" | "comments" | "mentions" | "messages" | "connections" | "groups" | "marketplace" | "platformUpdates">; label: string; description: string }> = [
   { key: "postLikes", label: "Likes", description: "Reactions to your posts" },
@@ -45,7 +45,7 @@ export function NotificationSettingsPage() {
   async function removeDevice(deviceId: string, label: string) {
     setBusy(true); setMessage(null);
     try {
-      if (label === "This browser") await removeCurrentBrowserPush();
+      if (label === currentBrowserDeviceLabel()) await removeCurrentBrowserPush();
       await deleteDevice.mutateAsync(deviceId);
       setMessage("This device was removed from push notifications.");
     } catch { setMessage("Could not remove this device. Please try again."); }

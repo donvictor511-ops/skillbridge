@@ -1,6 +1,7 @@
 import { prisma } from "../../db/prisma";
 import { AppError } from "../../utils/appError";
-import { isUserOnline, publishToUser } from "../messages/messages.realtime";
+import { publishToUser } from "../messages/messages.realtime";
+import { onlineUserIds } from "../messages/presence.runtime";
 import { usersHaveBlockedEachOther } from "../profiles/profile.blocking";
 
 type CallKind = "direct" | "community" | "interview";
@@ -14,7 +15,9 @@ const callInclude = {
   participants: { include: { user: { select: { id: true, profile: { select: { displayName: true, avatarUrl: true } } } } } },
 } as const;
 
-function serializeCall(call: Awaited<ReturnType<typeof loadCall>>) {
+async function serializeCall(call: Awaited<ReturnType<typeof loadCall>>) {
+  const userIds = call.participants.map((participant) => participant.user.id);
+  const onlineUsers = await onlineUserIds(userIds);
   return {
     id: call.id, kind: call.kind, mode: call.mode, status: call.status, createdAt: call.createdAt.toISOString(), conversationId: call.conversationId,
     community: call.community,
@@ -24,7 +27,7 @@ function serializeCall(call: Awaited<ReturnType<typeof loadCall>>) {
       displayName: participant.user.profile?.displayName ?? "SkillBridge member",
       avatarUrl: participant.user.profile?.avatarUrl ?? null,
       status: participant.status,
-      isOnline: isUserOnline(participant.user.id),
+      isOnline: onlineUsers.has(participant.user.id),
     })),
   };
 }
@@ -125,7 +128,7 @@ export async function getCall(callId: string, userId: string) {
     broadcast(call.id, call.participants.map((participant) => participant.userId), "call.ended", { userId: call.createdById, reason: "unanswered" });
     call = await loadCall(callId);
   }
-  return { ...serializeCall(call), iceServers: getIceServers() };
+  return { ...await serializeCall(call), iceServers: getIceServers() };
 }
 
 export async function joinCall(callId: string, userId: string) {

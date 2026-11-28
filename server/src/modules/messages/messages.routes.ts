@@ -10,6 +10,7 @@ export const messagesRouter = Router();
 messagesRouter.use((_req, res, next) => { res.setHeader("Cache-Control", "private, no-store"); next(); });
 messagesRouter.use(requireAuth);
 messagesRouter.get("/events", controller.openEvents);
+messagesRouter.post("/presence/heartbeat", controller.presenceHeartbeat);
 messagesRouter.post("/media", requireWriteAccess, uploadSinglePostMedia, uploadPostMediaController);
 messagesRouter.post("/audio", requireWriteAccess, uploadSingleAudioMessage, uploadAudioMessage);
 messagesRouter.get("/unread-count", controller.unreadCount);

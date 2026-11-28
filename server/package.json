@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "tsx scripts/recoverKnownMigration.ts && prisma migrate deploy",
     "db:check": "tsx src/db/checkConnection.ts",
+    "test:unit": "npm run build && node --test dist/modules/messages/presence.service.test.js dist/modules/notifications/deviceTokenCrypto.test.js dist/modules/notifications/pushDeliveryQueue.test.js",
     "admin:set": "tsx scripts/set-admin.ts",
     "test:smoke": "bash scripts/smoke-auth.sh",
     "test:smoke:profiles": "bash scripts/smoke-profiles.sh",
